@@ -34,7 +34,7 @@
 需要 Python 3.10+，不需要装任何包。
 
 ```powershell
-git clone <this-repo>
+git clone <https://github.com/zyj52742-cloud/human-memory.git>
 cd human-memory
 
 # 记一句话
