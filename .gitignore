@@ -1,0 +1,24 @@
+# 记忆数据（含真实对话内容，绝不提交）
+data/
+*.db
+*.db-wal
+*.db-shm
+
+# 构建产物
+dist/
+build/
+*.egg-info/
+__pycache__/
+*.pyc
+*.pyo
+
+# 临时文件
+tmp/
+_test*.py
+*.log
+*.zip
+
+# 编辑器
+.vscode/
+.idea/
+.DS_Store
