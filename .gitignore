@@ -3,6 +3,14 @@ data/
 *.db
 *.db-wal
 *.db-shm
+*.sqlite
+*.sqlite3
+*.sqlite-wal
+*.sqlite-shm
+*.sqlite3-wal
+*.sqlite3-shm
+*.sqlite-journal
+*.sqlite3-journal
 
 # 构建产物
 dist/
@@ -14,9 +22,28 @@ __pycache__/
 
 # 临时文件
 tmp/
+tests/_tmp/
 _test*.py
 *.log
 *.zip
+
+# 记忆宇宙：演示 / 导出生成物（不是源码）
+# 注意：skills/memory-universe/assets/_lib/ 下的 atlas.js、memory-webgl.js、
+# tex_procedural.js 是静态源码，不在忽略范围内。
+skills/memory-universe/demo/
+skills/memory-universe/.demo-build/
+**/network-data.js
+**/data.js
+**/_cache.json
+**/memory-source.json
+**/memory-activity.jsonl
+**/memory-activity*.jsonl
+**/activity-*.jsonl
+**/plugin-health.json
+*.db-journal
+# 本机运行时快照（可能含本机路径，不提交）
+*.local.json
+*.local.md
 
 # 编辑器
 .vscode/

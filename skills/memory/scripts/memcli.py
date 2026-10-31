@@ -14,6 +14,7 @@ AI 读 SKILL.md 后按指令执行这些命令。输出是给 AI 看的精简文
     python memcli.py sleep 3
     python memcli.py wake 3
     python memcli.py pin 3
+    python memcli.py delete 3
 """
 
 import sys
@@ -86,7 +87,7 @@ def main() -> int:
         print(f"总 {s['total']} 条｜活跃 {s['active']}｜休眠 {s['dormant']}｜钉住 {s['pinned']}")
         return 0
 
-    if cmd in ("explain", "sleep", "wake", "pin"):
+    if cmd in ("explain", "sleep", "wake", "pin", "delete"):
         if not args:
             print(f"用法: {cmd} 序号")
             return 1
@@ -103,6 +104,9 @@ def main() -> int:
         elif cmd == "wake":
             r = mc.set_status(mid, "active")
             print(f"#{mid} 已唤醒" if r.get("ok") else f"失败：{r.get('reason')}")
+        elif cmd == "delete":
+            r = mc.delete_memory(mid)
+            print(f"#{mid} 已删除（软删除，不再召回）" if r.get("ok") else f"失败：{r.get('reason')}")
         else:
             r = mc.set_pinned(mid, True)
             print(f"#{mid} 已钉住" if r.get("ok") else f"失败：{r.get('reason')}")

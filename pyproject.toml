@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "human-memory"
-version = "0.4.0"
+version = "0.6.0a1"
 description = "类人脑记忆插件：分主次、会休眠、被提起才想起、可手动抢救"
 readme = "README.md"
 requires-python = ">=3.10"

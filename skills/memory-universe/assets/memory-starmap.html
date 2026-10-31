@@ -1,0 +1,2245 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>记忆星图 · 行星档案{{TITLE_SUFFIX}}</title>
+<style>
+  :root{
+    --bg:#04060e;
+    --ink:#e9f0ff;
+    --dim:#7d8aa8;
+    --line:rgba(130,165,255,.18);
+    --glass:rgba(10,16,32,.72);
+    --accent:#5ac8fa;
+    --gold:#ffd54f;
+  }
+  *{box-sizing:border-box;margin:0;padding:0}
+  html,body{height:100%;overflow:hidden;background:var(--bg);color:var(--ink);
+    font-family:"Segoe UI","Microsoft YaHei",system-ui,sans-serif;-webkit-font-smoothing:antialiased}
+  canvas#sky{position:fixed;inset:0;width:100%;height:100%;display:block;cursor:grab}
+  canvas#sky.dragging{cursor:grabbing}
+  canvas#sky.pointing{cursor:pointer}
+
+  .topbar{position:fixed;left:0;right:0;top:0;z-index:20;display:flex;align-items:center;gap:14px;
+    padding:14px 18px;pointer-events:none}
+  .topbar>*{pointer-events:auto}
+  .brand{display:flex;align-items:baseline;gap:9px;white-space:nowrap}
+  .brand b{font-size:17px;letter-spacing:.06em;font-weight:600}
+  .brand span{font-size:12px;color:var(--dim)}
+  .brand .dot{color:var(--accent)}
+
+  .search{position:relative;flex:1;max-width:360px}
+  .search input{width:100%;padding:9px 14px 9px 34px;border-radius:999px;border:1px solid var(--line);
+    background:rgba(12,20,38,.66);color:var(--ink);font-size:13px;outline:none;
+    backdrop-filter:blur(10px);transition:border-color .18s,box-shadow .18s}
+  .search input:focus{border-color:rgba(90,200,250,.55);box-shadow:0 0 0 3px rgba(90,200,250,.12)}
+  .search input::placeholder{color:#5d6a86}
+  .search .ico{position:absolute;left:13px;top:50%;transform:translateY(-50%);color:#5d6a86;font-size:13px}
+  .search .hits{position:absolute;right:12px;top:50%;transform:translateY(-50%);font-size:11px;color:var(--accent);display:none}
+
+  .seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;
+    background:rgba(12,20,38,.66);backdrop-filter:blur(10px)}
+  .seg button{border:0;background:transparent;color:var(--dim);padding:8px 14px;font-size:12px;
+    cursor:pointer;transition:.16s;font-family:inherit}
+  .seg button.on{background:rgba(90,200,250,.16);color:#bfe9ff}
+  .seg button:hover{color:var(--ink)}
+
+  .iconbtn{border:1px solid var(--line);background:rgba(12,20,38,.66);color:var(--dim);
+    border-radius:999px;padding:8px 14px;font-size:12px;cursor:pointer;backdrop-filter:blur(10px);
+    transition:.16s;font-family:inherit;white-space:nowrap}
+  .iconbtn:hover{color:var(--ink);border-color:rgba(130,165,255,.4)}
+  .iconbtn.on{color:#ffe08a;border-color:rgba(255,213,79,.45);background:rgba(255,213,79,.1)}
+  .spacer{flex:1}
+
+  #tooltip{position:fixed;z-index:40;pointer-events:none;padding:7px 11px;border-radius:9px;
+    background:rgba(8,14,28,.92);border:1px solid var(--line);font-size:12px;line-height:1.45;
+    max-width:320px;opacity:0;transform:translateY(4px);transition:opacity .12s,transform .12s;
+    box-shadow:0 8px 28px rgba(0,0,0,.5)}
+  #tooltip.show{opacity:1;transform:translateY(0)}
+  #tooltip .t{font-weight:600;margin-bottom:3px}
+  #tooltip .m{color:var(--dim);font-size:11px}
+
+  #panel{position:fixed;top:0;right:0;bottom:0;width:420px;max-width:92vw;z-index:30;
+    background:linear-gradient(180deg,rgba(11,18,36,.94),rgba(7,11,24,.97));
+    border-left:1px solid var(--line);backdrop-filter:blur(18px);
+    transform:translateX(103%);transition:transform .32s cubic-bezier(.22,.9,.28,1);
+    display:flex;flex-direction:column;box-shadow:-24px 0 60px rgba(0,0,0,.45)}
+  #panel.open{transform:translateX(0)}
+  .panel-head{padding:20px 22px 14px;border-bottom:1px solid var(--line);display:flex;gap:12px;align-items:flex-start}
+  .panel-head h2{font-size:16px;line-height:1.4;font-weight:600;flex:1;word-break:break-word}
+  .panel-close{border:0;background:transparent;color:var(--dim);font-size:20px;cursor:pointer;
+    line-height:1;padding:2px 4px;border-radius:6px}
+  .panel-close:hover{color:var(--ink);background:rgba(255,255,255,.06)}
+  .panel-body{flex:1;overflow-y:auto;padding:16px 22px 26px}
+  .panel-body::-webkit-scrollbar{width:8px}
+  .panel-body::-webkit-scrollbar-thumb{background:rgba(120,150,220,.22);border-radius:8px}
+  .chips{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:16px}
+  .chip{font-size:11px;padding:4px 10px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+  .chip.proj{color:#bfe9ff;border-color:rgba(90,200,250,.34);background:rgba(90,200,250,.08)}
+  .chip.fav{color:#ffe08a;border-color:rgba(255,213,79,.4);background:rgba(255,213,79,.09)}
+  .chip.sub{color:#c8b6ff;border-color:rgba(199,146,234,.35);background:rgba(199,146,234,.08)}
+  .kv{display:grid;grid-template-columns:76px 1fr;gap:8px 10px;font-size:12.5px;margin-bottom:18px}
+  .kv dt{color:var(--dim)}
+  .kv dd{color:var(--ink);word-break:break-word}
+  .sect{font-size:11px;letter-spacing:.12em;color:#6b7a99;margin:20px 0 8px;text-transform:uppercase}
+  .quote{font-size:13px;line-height:1.66;color:#cfd9ee;background:rgba(255,255,255,.035);
+    border-left:2px solid rgba(90,200,250,.45);border-radius:0 8px 8px 0;padding:11px 13px;white-space:pre-wrap;
+    word-break:break-word;max-height:220px;overflow-y:auto}
+  .quote.asst{border-left-color:rgba(199,146,234,.45)}
+  .tagrow{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:9px}
+  .tag{font-size:11px;padding:3px 9px;border-radius:999px;background:rgba(90,200,250,.12);
+    color:#bfe9ff;border:1px solid rgba(90,200,250,.25);display:flex;align-items:center;gap:5px}
+  .tag i{cursor:pointer;font-style:normal;opacity:.6}
+  .tag i:hover{opacity:1}
+  .inline-input{width:100%;padding:8px 11px;border-radius:8px;border:1px solid var(--line);
+    background:rgba(8,14,28,.7);color:var(--ink);font-size:12.5px;outline:none;font-family:inherit}
+  .inline-input:focus{border-color:rgba(90,200,250,.5)}
+  .btnrow{display:flex;gap:8px;margin-top:16px;flex-wrap:wrap}
+  .btn{flex:1;min-width:120px;padding:10px 14px;border-radius:10px;border:1px solid var(--line);
+    background:rgba(255,255,255,.04);color:#cfd9ee;font-size:12.5px;cursor:pointer;font-family:inherit;transition:.16s}
+  .btn:hover{background:rgba(255,255,255,.08);color:#fff}
+  .btn.primary{border-color:rgba(90,200,250,.5);background:rgba(90,200,250,.14);color:#d7f1ff}
+  .btn.primary:hover{background:rgba(90,200,250,.24)}
+  .mono{font-family:Consolas,monospace;font-size:11px;color:#93a4c6;word-break:break-all;
+    background:rgba(255,255,255,.04);padding:8px 10px;border-radius:8px}
+
+  #replay{position:fixed;left:50%;bottom:18px;transform:translateX(-50%);z-index:20;
+    display:flex;align-items:center;gap:12px;padding:10px 16px;border-radius:999px;
+    background:rgba(10,16,32,.74);border:1px solid var(--line);backdrop-filter:blur(14px);
+    max-width:calc(100vw - 36px)}
+  #replay .play{border:0;background:rgba(90,200,250,.16);color:#bfe9ff;width:32px;height:32px;
+    border-radius:50%;cursor:pointer;font-size:12px;display:grid;place-items:center;flex:none}
+  #replay .play:hover{background:rgba(90,200,250,.28)}
+  #replay input[type=range]{width:min(280px,32vw);accent-color:#5ac8fa;cursor:pointer}
+  #replay .when{font-size:11.5px;color:#9fb0cf;min-width:92px;font-variant-numeric:tabular-nums}
+  .toggle{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--dim);cursor:pointer;user-select:none}
+  .toggle input{accent-color:#5ac8fa;cursor:pointer}
+  .toggle:hover{color:var(--ink)}
+
+  #boot{position:fixed;inset:0;z-index:60;display:grid;place-items:center;background:#04060e}
+  #boot .card{max-width:440px;padding:28px;border-radius:16px;border:1px solid var(--line);
+    background:rgba(12,20,38,.8);text-align:center;line-height:1.8}
+  #boot h3{font-size:16px;margin-bottom:10px}
+  #boot p{font-size:13px;color:var(--dim)}
+  #boot code{font-family:Consolas,monospace;color:#bfe9ff;background:rgba(90,200,250,.1);padding:1px 6px;border-radius:5px}
+  .hide{display:none!important}
+
+  #toast{position:fixed;left:50%;bottom:78px;transform:translate(-50%,8px);z-index:50;
+    padding:9px 16px;border-radius:999px;background:rgba(90,200,250,.16);border:1px solid rgba(90,200,250,.4);
+    color:#d7f1ff;font-size:12px;opacity:0;transition:.22s;pointer-events:none}
+  #toast.show{opacity:1;transform:translate(-50%,0)}
+
+  #stats{position:fixed;right:18px;bottom:14px;z-index:20;font-size:11px;color:#4f5b76;
+    line-height:1.7;pointer-events:none;text-align:right}
+  #stats b{color:#9aa7c2;font-weight:500}
+
+  /* ================= 2026-10-28 · 3D 改版：黑底 + 暖白 + 金 ================= */
+  :root{ --accent:#e9c480; --line:rgba(210,222,248,.14); --glass:rgba(9,13,22,.78); }
+  .brand .dot{color:#e9c480}
+  .brand b{letter-spacing:.08em}
+  .search input{background:rgba(10,14,24,.62)}
+  .search input:focus{border-color:rgba(233,196,128,.5);box-shadow:0 0 0 3px rgba(233,196,128,.1)}
+  .search .hits{color:#f0d9a8}
+  .seg,.iconbtn{background:rgba(10,14,24,.62)}
+  .seg button.on{background:rgba(233,196,128,.15);color:#f6e4bb}
+  .iconbtn:hover{border-color:rgba(233,196,128,.34)}
+  .iconbtn.on{color:#f6e4bb;border-color:rgba(233,196,128,.42);background:rgba(233,196,128,.1)}
+  #panel{background:linear-gradient(180deg,rgba(10,13,22,.95),rgba(6,9,16,.97))}
+  .chip.proj{color:#f0dcb0;border-color:rgba(233,196,128,.3);background:rgba(233,196,128,.07)}
+  .quote{border-left-color:rgba(233,196,128,.42)}
+  .tag{background:rgba(233,196,128,.1);color:#f0dcb0;border-color:rgba(233,196,128,.22)}
+  .inline-input:focus{border-color:rgba(233,196,128,.45)}
+  .btn.primary{border-color:rgba(233,196,128,.45);background:rgba(233,196,128,.13);color:#f8ecd0}
+  .btn.primary:hover{background:rgba(233,196,128,.22)}
+  #replay{background:rgba(9,13,22,.76)}
+  #replay .play{background:rgba(233,196,128,.15);color:#f8e8c4}
+  #replay .play:hover{background:rgba(233,196,128,.26)}
+  #replay input[type=range],.toggle input{accent-color:#e9c480}
+  #toast{background:rgba(233,196,128,.14);border-color:rgba(233,196,128,.36);color:#f8ecd0}
+
+  /* 左上引文卡：数据之外的那句话 —— 参考站是「天文学思想长廊」，这里是对话里的原话 */
+  #quote{position:fixed;left:22px;top:84px;z-index:15;width:min(430px,34vw);
+    padding:15px 18px 13px 19px;border-radius:12px;pointer-events:none;
+    background:linear-gradient(100deg,rgba(9,12,20,.66),rgba(9,12,20,.16) 76%,rgba(9,12,20,0));
+    border-left:2px solid rgba(233,196,128,.5);opacity:0;transform:translateY(-5px);
+    transition:opacity .55s ease,transform .55s ease}
+  #quote.show{opacity:1;transform:none}
+  #quote .eyebrow{font:10.5px Consolas,monospace;letter-spacing:.30em;color:#8d97ae}
+  #quote .eyebrow b{color:#c9a86a;font-weight:400}
+  #quote .line{font-size:16.5px;line-height:1.62;color:#eef2fb;margin:9px 0;
+    text-shadow:0 1px 22px rgba(0,0,0,.8)}
+  #quote .meta{font-size:11.5px;color:#79839b}
+
+  /* 2026-10-30：原生分辨率3D场景与透明交互层 */
+  :root{--ink:#eee8dc;--dim:#a59d8e;--bg:#030408;--line:rgba(218,199,161,.17)}
+  #cosmos{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  canvas#sky{z-index:1}
+  .topbar{padding:24px 30px;display:grid;grid-template-columns:minmax(240px,1fr) minmax(200px,340px) auto;gap:28px;align-items:center;
+    background:linear-gradient(#040509e8,#04050900)}
+  .brand{display:flex;flex-direction:column;align-items:flex-start;gap:7px}
+  .brand b{font-size:20px;font-weight:400;letter-spacing:.22em}
+  .brand span{font-size:10px;letter-spacing:.04em}
+  .brand .dot{font-size:14px;margin-right:6px}
+  .search{width:100%;max-width:none}
+  .search input{border-radius:8px;padding:11px 38px 11px 34px;background:#090b10b0}
+  .seg,.iconbtn{background:#0a0c12b8;backdrop-filter:blur(12px)}
+  .seg{border-radius:8px}.seg button{padding:10px 16px}
+  .actions{position:fixed;right:30px;top:88px;display:flex;gap:8px;z-index:20;align-items:center}
+  .actions .iconbtn{border-radius:7px;padding:8px 11px}
+  .actions .seg button{padding:8px 11px}
+  #quote{top:123px;left:30px;width:290px;padding:12px 16px;max-height:165px;overflow:hidden}
+  #quote .line{font-size:14px;line-height:1.8}
+  #quote .eyebrow{font-size:9px;letter-spacing:.16em}
+  #quote .meta{font-size:10px;line-height:1.6}
+  #atlasNote{position:fixed;left:30px;bottom:33px;z-index:10;pointer-events:none;font-size:10px;letter-spacing:.12em;color:#8f8573;line-height:2}
+  #focusNote{color:#d2bb8e;letter-spacing:.04em}
+  #stats{right:30px;bottom:30px;color:#827b6c;font-size:10px}
+  #replay{bottom:27px;border-radius:9px;gap:10px;background:#090b10d6}
+  #replay input[type=range]{width:min(240px,23vw)}
+  .toggle{color:#b8ae9a;white-space:nowrap;flex-shrink:0}
+  #panel{width:390px;background:linear-gradient(160deg,#111117f5,#06080df8)}
+  body.has-panel .actions{right:414px}
+  body.has-panel .topbar{right:390px}
+  #focusNote{display:block;max-width:350px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .panel-head h2{font-weight:400;letter-spacing:.04em}
+  .chip,.quote,.mono,.kv dd{color:#d6d0c2}.kv dt{color:#918878}
+  #toast{bottom:95px}
+  button:focus-visible,input:focus-visible{outline:2px solid #d8b878;outline-offset:3px}
+  @media(max-width:1100px){.topbar{grid-template-columns:1fr 250px;gap:14px;padding:18px 20px}#layoutSeg{grid-column:1 / -1;justify-self:start}
+    .actions{top:98px;right:20px}.brand b{font-size:17px}#quote{top:158px;left:20px;width:230px}#atlasNote{left:20px;bottom:100px}#stats{bottom:100px}}
+  @media(max-width:900px){#quote{display:none}}
+  @media(max-width:700px){.topbar{grid-template-columns:1fr;padding:14px;gap:10px}.brand span{font-size:9px}.brand b{font-size:16px}
+    .search{max-width:100%}#layoutSeg{grid-column:auto}.seg button{padding:8px 12px}.actions{top:auto;bottom:93px;left:14px;right:14px;justify-content:center;flex-wrap:wrap}
+    .actions .iconbtn{font-size:11px;padding:7px 9px}#quote{display:none}#atlasNote,#stats{display:none}#replay{bottom:14px;gap:7px;padding:9px 10px;width:calc(100vw - 28px)}
+    #replay input[type=range]{width:20vw;flex:1}#replay .when{min-width:68px;font-size:10px}.toggle{font-size:10px}.panel-body{padding:14px 18px}
+    body.has-panel .actions{right:14px}body.has-panel .topbar{right:0;grid-template-columns:1fr}body.has-panel .search{display:block}}
+
+</style>
+
+<style>
+  /* 演示标识：只在 demo 生成时注入，放进品牌区，不覆盖搜索框等控件 */
+  .brand .demo-chip{display:inline-flex;align-items:center;margin-left:10px;
+    padding:2px 7px;border:1px solid rgba(226,150,96,.5);border-radius:4px;
+    background:rgba(150,60,30,.2);color:#ffc9a8;
+    font:600 10px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;
+    letter-spacing:.06em;white-space:nowrap;vertical-align:middle}
+</style>
+</head>
+<body>
+<canvas id="cosmos" aria-hidden="true"></canvas>
+<canvas id="sky" aria-label="可拖拽旋转的记忆星图"></canvas>
+
+<div class="topbar">
+  <div class="brand"><b><span class="dot">✦</span> 记忆星图{{DEMO_BANNER}}</b><span id="brandSub">加载中…</span></div>
+  <div class="search">
+    <span class="ico">⌕</span>
+    <input id="q" type="text" placeholder="搜索标题或第一句话…（按 / 聚焦）" autocomplete="off" spellcheck="false">
+    <span class="hits" id="hits"></span>
+  </div>
+  <div class="seg" id="layoutSeg">
+    <button data-layout="ball" class="on">轨道</button>
+    <button data-layout="time">时间轴</button>
+    <button data-layout="project">项目团</button>
+  </div>
+
+</div>
+
+<div class="actions"> <a class="iconbtn" id="networkView" href="01-记忆宇宙.html" style="text-decoration:none;display:inline-flex;align-items:center">◈ 关联网络</a> <div class="seg" id="filterSeg">
+    <button data-filter="all" class="on">全部</button>
+    <button data-filter="fav">收藏</button>
+  </div>
+  <button class="iconbtn" id="tourBtn">✦ 巡览</button>
+  <button class="iconbtn" id="addStar">＋ 加星</button>
+  <button class="iconbtn" id="homeBtn" title="返回完整星图">总览</button>
+  <button class="iconbtn" id="motionBtn" title="暂停或继续公转">暂停</button>
+  <button class="iconbtn" id="exportBtn" title="导出收藏、标签和手动星">备份</button>
+  <button class="iconbtn" id="importBtn" title="导入本页导出的个人标记">导入</button>
+</div>
+<input type="file" id="importFile" accept="application/json,.json" class="hide">
+<div id="atlasNote">MEMORY ATLAS / 私人对话档案<br><span id="focusNote">每颗行星是一段对话 · 小卫星是派生会话</span></div>
+<div id="tooltip"></div>
+
+<div id="quote">
+  <div class="eyebrow"><b>MEMORY VOICES</b> · 对话里的一句话</div>
+  <div class="line" id="qLine">—</div>
+  <div class="meta" id="qMeta">—</div>
+</div>
+
+<aside id="panel">
+  <div class="panel-head">
+    <h2 id="pTitle">—</h2>
+    <button class="panel-close" id="pClose">×</button>
+  </div>
+  <div class="panel-body" id="pBody"></div>
+</aside>
+
+<div id="replay">
+  <button class="play" id="playBtn">▶</button>
+  <input id="timeSlider" type="range" min="0" max="1000" value="1000">
+  <span class="when" id="whenLabel">—</span>
+  <label class="toggle"><input type="checkbox" id="showSubs" checked> 卫星</label>
+  <label class="toggle"><input type="checkbox" id="showGone"> 已归档</label>
+</div>
+
+<div id="stats"></div>
+<div id="toast"></div>
+
+<div id="boot"><div class="card">
+  <h3>还没有星图数据</h3>
+  <p>运行 <code>universe.py demo</code> 或 <code>universe.py export</code> 生成数据，<br>然后刷新这个页面。</p>
+</div></div>
+
+<script src="_lib/data.js"></script>
+<script src="_lib/three.min.js"></script>
+<script src="_lib/tex_procedural.js"></script>
+<script src="_lib/memory-webgl.js"></script>
+<script>
+"use strict";
+(function(){
+  var DATA = window.__STAR_DATA__ || null;
+  var boot = document.getElementById("boot");
+  if (!DATA || !DATA.stars || !DATA.stars.length) { boot.classList.remove("hide"); return; }
+  boot.classList.add("hide");
+
+  /* ---------------- 基础工具 ---------------- */
+  var TAU = Math.PI * 2;
+  function clamp(v,a,b){ return v<a?a:(v>b?b:v); }
+  function lerp(a,b,t){ return a+(b-a)*t; }
+  function h01(str){ // 稳定哈希 -> [0,1)
+    var h = 2166136261 >>> 0;
+    for (var i=0;i<str.length;i++){ h ^= str.charCodeAt(i); h = Math.imul(h,16777619) >>> 0; }
+    return (h % 100000) / 100000;
+  }
+  function hex2rgb(hex){
+    var n = parseInt(hex.slice(1),16);
+    return [ (n>>16)&255, (n>>8)&255, n&255 ];
+  }
+  function rgba(hex,a){ var c=hex2rgb(hex); return "rgba("+c[0]+","+c[1]+","+c[2]+","+a+")"; }
+
+  // 同一项目内再给每颗星一点色相/明度偏移 —— 画面上不能只有一种蓝，
+  // 参考站的行星是各不相同的（这是「天文图册感」的一半来源）
+  function rgb2hsl(r,g,b){
+    r/=255; g/=255; b/=255;
+    var mx = Math.max(r,g,b), mn = Math.min(r,g,b), h = 0, s = 0, l = (mx+mn)/2;
+    if (mx !== mn){
+      var d = mx-mn;
+      s = l > 0.5 ? d/(2-mx-mn) : d/(mx+mn);
+      if (mx === r) h = ((g-b)/d + (g<b?6:0));
+      else if (mx === g) h = (b-r)/d + 2;
+      else h = (r-g)/d + 4;
+      h *= 60;
+    }
+    return [h, s, l];
+  }
+  function hsl2hex(h,s,l){
+    h = ((h%360)+360)%360; s = clamp(s,0,1); l = clamp(l,0,1);
+    function f(n){
+      var k = (n + h/30) % 12;
+      var a = s * Math.min(l, 1-l);
+      var v = l - a * Math.max(-1, Math.min(Math.min(k-3, 9-k), 1));
+      return Math.round(255*v).toString(16).padStart(2,"0");
+    }
+    return "#" + f(0) + f(8) + f(4);
+  }
+  function tintOf(hex, id){
+    var c = hex2rgb(hex), hsl = rgb2hsl(c[0],c[1],c[2]);
+    var dh = (h01(id + "h") - 0.5) * 46;              // 色相左右各 23°
+    var ds = clamp(hsl[1] * (0.86 + h01(id + "s") * 0.30), 0.16, 0.86);
+    var dl = clamp(hsl[2] * (0.90 + h01(id + "l") * 0.26), 0.42, 0.80);
+    return hsl2hex(hsl[0] + dh, ds, dl);
+  }
+  function fmtDate(ms){
+    if (!ms) return "—";
+    var d = new Date(ms);
+    return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0");
+  }
+  function fmtFull(ms){
+    if (!ms) return "—";
+    var d = new Date(ms);
+    return fmtDate(ms)+" "+String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0");
+  }
+  function ago(ms){
+    var s = (Date.now()-ms)/1000;
+    if (s<60) return "刚刚";
+    if (s<3600) return Math.floor(s/60)+" 分钟前";
+    if (s<86400) return Math.floor(s/3600)+" 小时前";
+    return Math.floor(s/86400)+" 天前";
+  }
+  function toast(msg){
+    var el = document.getElementById("toast");
+    el.textContent = msg; el.classList.add("show");
+    clearTimeout(toast._t);
+    toast._t = setTimeout(function(){ el.classList.remove("show"); }, 1800);
+  }
+
+  /* ---------------- 存储：收藏 / 标签 / 手动星 ---------------- */
+  var PKEY = "starmap.profile.v1";
+  var profile = { stars:{}, custom:[] };
+  try {
+    var raw = localStorage.getItem(PKEY);
+    if (raw) profile = JSON.parse(raw);
+  } catch(e){}
+  if (!profile.stars) profile.stars = {};
+  if (!profile.custom) profile.custom = [];
+  function saveProfile(){
+    try { localStorage.setItem(PKEY, JSON.stringify(profile)); } catch(e){ toast("浏览器禁止本地存储，改动只在本次有效"); }
+  }
+  function pOf(id){ return profile.stars[id] || (profile.stars[id] = {}); }
+
+  /* ---------------- 项目配色 ---------------- */
+  // 低饱和「天文图册」配色：黑底上只用少量颜色区分项目，主体交给暖白与金
+  var PALETTE = ["#8ec5f0","#bfa6e8","#ecc98a","#9bd8b8","#eda6bc","#e8b98d","#9fb4ee","#cbb0f0"];
+  var projList = Object.keys(DATA.projects || {}).sort(function(a,b){ return (DATA.projects[b]||0)-(DATA.projects[a]||0); });
+  var projColor = {};
+  projList.forEach(function(p,i){ projColor[p] = PALETTE[i % PALETTE.length]; });
+
+  /* ---------------- 节点构建 ---------------- */
+  var stars = DATA.stars.slice();
+  var mainStars = stars.filter(function(s){ return !s.sub; });
+  var subStars  = stars.filter(function(s){ return !!s.sub; });
+
+  var nodeById = {};     // 原始 id
+  var byIdAny  = {};     // 去掉 session- 前缀的 id（v3/v4 格式不同，父引用是裸 uuid）
+  var nodes = [];
+  function keyOf(id){ return String(id||"").replace(/^session-/, ""); }
+  var t0 = Math.min.apply(null, stars.map(function(s){ return s.created || s.last; }));
+  var t1 = Math.max.apply(null, stars.map(function(s){ return s.last || s.created; }));
+  if (!isFinite(t0) || !isFinite(t1) || t1<=t0) { t0 = t0||Date.now()-86400000; t1 = t0+86400000; }
+
+  function makeNode(s, kind){
+    var n = {
+      id: s.id, s: s, kind: kind || "main",
+      bx:0, by:0, tbx:0, tby:0,
+      nx:0, ny:0, nz:0, px:0, py:0, ps:1, pz:0,
+      orbR:0, orbA:0, orbW:0, rec:0,
+      phase: h01(s.id)*TAU,
+      hue: tintOf(projColor[s.project] || PALETTE[0], s.id),
+      r: 0, alpha: 1, targetAlpha: 1,
+      visible: true, match: true, fav: !!(profile.stars[s.id] && profile.stars[s.id].fav)
+    };
+    if (kind === "main") {
+      var turns = s.turns || 1;
+      n.r = 5 + Math.min(21, Math.sqrt(turns)*2.35);
+    } else if (kind === "sub") {
+      n.r = 5.2;
+    } else {
+      n.r = 6;
+    }
+    nodeById[n.id] = n;
+    byIdAny[keyOf(n.id)] = n;
+    nodes.push(n);
+    return n;
+  }
+  mainStars.forEach(function(s){ makeNode(s,"main"); });
+  subStars.forEach(function(s){ makeNode(s,"sub"); });
+  (DATA.archived||[]).forEach(function(a){ makeNode({id:a.id,title:a.title,project:"已归档",created:a.last||0,last:a.last||0,turns:1,firstUser:"",firstAsst:"",sub:0}, "gone"); });
+  projColor["已归档"] = "#5c6781";
+  nodes.filter(function(n){ return n.kind === "gone"; }).forEach(function(n){ n.hue = "#5c6781"; n.r = 7; });
+  projColor["手动"] = projColor["手动"] || "#7ee787";
+
+  function parentOf(n){
+    if (!n.s || !n.s.parent) return null;
+    return byIdAny[keyOf(n.s.parent)] || nodeById[n.s.parent] || null;
+  }
+
+  /* ---------------- 布局 ---------------- */
+  var W = innerWidth, H = innerHeight, DPR = Math.min(2, devicePixelRatio||1);
+  var canvas = document.getElementById("sky");
+  var ctx = canvas.getContext("2d");
+  var glCanvas = document.getElementById("cosmos"), webgl = null, glError = null;
+  try { if (!window.MemoryWebGL) throw new Error("3D渲染模块未加载"); webgl = new MemoryWebGL({canvas:glCanvas}); }
+  catch(e) { glError = String(e); console.error(e); glCanvas.style.display="none"; }
+  var frameSamples = [], lastMeasure = 0, measuredFPS = 0;
+
+
+  var state = {
+    layout: "ball",
+    filter: "all",
+    q: "",
+    scale: 1,
+    panX: 0,
+    cutoff: t1,          // 时间回放截止
+    playing: false,
+    showSubs: true,
+    showGone: false,
+    selected: null,
+    hover: null,
+    dragging: false,
+    dragMoved: 0,
+    rotX: -1.10,         // 盘面俯仰（更像从高处俯瞰的太阳系仪）
+    rotY: 0.35,          // 盘面方位
+    spin: true,          // 自动公转
+    zoom: 1,          // 当前缩放（每帧缓动）
+    tZoom: 1,         // 目标缩放
+    camX: 0, camY: 0, camZ: 0,    // 镜头中心（盘面世界坐标）—— 聚焦某颗星时平移过去
+    tCamX: 0, tCamY: 0, tCamZ: 0,  // 镜头中心的目标值
+    focusStar: null,     // 正在聚焦的星（镜头每帧跟随它，像以它为参考系）
+    fov: 1250            // 透视焦距：越小近大远小越明显（更有 3D 纵深感）
+  };
+
+  function projectBands(){
+    var bands = {}, list = projList.filter(function(p){ return p !== "已归档"; });
+    var n = Math.max(1, list.length);
+    list.forEach(function(p,i){
+      bands[p] = n===1 ? 0.5 : (0.34 + 0.34 * (i/Math.max(1,n-1)));
+    });
+    bands["已归档"] = 0.9;
+    return bands;
+  }
+
+  function layoutTime(){
+    var padX = Math.max(70, W*0.07);
+    var span = Math.max(1, t1-t0);
+    // 每个项目一条横向泳道，高度按星数占比分配 —— 星多的项目铺满主视野
+    var pmap = {};
+    nodes.forEach(function(n){ if (n.kind !== "gone") pmap[n.s.project] = (pmap[n.s.project]||0) + 1; });
+    var list = Object.keys(pmap).sort(function(a,b){ return pmap[b]-pmap[a]; });
+    var total = 0, bands = {}, acc = 0.10;
+    list.forEach(function(p){ total += pmap[p]; });
+    total = Math.max(1,total);
+    list.forEach(function(p){
+      var h = Math.max(0.05, 0.80 * (pmap[p]/total));
+      bands[p] = { top: acc, h: h };
+      acc += h + 0.03;
+    });
+    nodes.forEach(function(n){
+      if (n.kind === "gone") {
+        n.tbx = W*0.5 + (h01(n.id)-0.5)*W*0.6;
+        n.tby = H*0.94 + (h01(n.id+"g")-0.5)*26;
+        return;
+      }
+      var t01 = clamp(((n.s.created||n.s.last) - t0)/span, 0, 1);
+      var x = padX + t01*(W-2*padX);
+      var b = bands[n.s.project] || { top: 0.1, h: 0.8 };
+      var y = H*(b.top + 0.5*b.h) + (h01(n.id+"y")-0.5)*b.h*H*0.92;
+      n.tbx = x; n.tby = y;
+    });
+    layoutSubs();
+  }
+
+  function layoutProject(){
+    var pmap = {};
+    nodes.forEach(function(n){ if (n.kind !== "gone") pmap[n.s.project] = (pmap[n.s.project]||0) + 1; });
+    var list = Object.keys(pmap).sort(function(a,b){ return pmap[b]-pmap[a]; });
+    var centers = [];
+    if (list.length === 1) centers = [[W*0.5, H*0.5]];
+    else if (list.length === 2) centers = [[W*0.34, H*0.5],[W*0.68, H*0.46]];
+    else {
+      var R = Math.min(W,H)*0.3;
+      list.forEach(function(p,i){
+        var a = -Math.PI/2 + i/list.length*TAU;
+        centers.push([W/2+Math.cos(a)*R*1.15, H/2+Math.sin(a)*R*0.95]);
+      });
+    }
+    var R2 = Math.min(W*0.30, H*0.40);
+    var totalMain = Math.max(1, mainStars.length);
+    list.forEach(function(p,pi){
+      var group = nodes.filter(function(n){ return n.kind==="main" && n.s.project===p; });
+      var c = centers[pi] || [W/2,H/2];
+      var share = group.length / totalMain;
+      var Rg = R2 * clamp(0.22 + 0.85*Math.sqrt(share), 0.22, 1);
+      var ga = Math.PI*(3-Math.sqrt(5)); // 黄金角
+      group.forEach(function(n,i){
+        var r = Rg * Math.sqrt((i+0.6)/Math.max(1,group.length));
+        var a = i*ga + h01(p)*TAU + (h01(n.id)-0.5)*0.35;
+        n.tbx = c[0] + Math.cos(a)*r*1.12;
+        n.tby = c[1] + Math.sin(a)*r*0.86;
+      });
+    });
+    nodes.filter(function(n){ return n.kind==="gone"; }).forEach(function(n){
+      n.tbx = W*0.5 + (h01(n.id)-0.5)*W*0.6; n.tby = H*0.94 + (h01(n.id+"g")-0.5)*26;
+    });
+    layoutSubs();
+  }
+
+  function layoutSubs(){
+    nodes.filter(function(n){return n.kind==="sub";}).sort(function(a,b){return (a.s.depth||1)-(b.s.depth||1);}).forEach(function(n){
+      if (n.kind !== "sub") return;
+      var p = parentOf(n);
+      if (!p) { n.tbx = W/2; n.tby = H/2; return; }
+      var a = h01(n.id)*TAU, r = 26 + h01(n.id+"r")*22;
+      n.tbx = p.tbx + Math.cos(a)*r;
+      n.tby = p.tby + Math.sin(a)*r;
+    });
+  }
+
+  function relayout(animate){
+    if (state.layout === "ball") layoutOrbit();
+    else if (state.layout === "time") layoutTime();
+    else layoutProject();
+    if (!animate) nodes.forEach(function(n){ n.bx = n.tbx; n.by = n.tby; });
+  }
+
+  // 轨道：像太阳系，最新在中心，越早轨道越大；沿轨道公转，内圈快、外圈慢
+  function orbitInner(){ return Math.max(75, Math.min(W,H)*0.17); }
+  function orbitOuter(){ return Math.min(W*0.40, H*0.37); }
+  function orbitSpan(){ return Math.max(70, orbitOuter() - orbitInner()); }
+  // 小组：把主对话按时间顺序切片，每片共用「一条轨道 + 一个自己的倾斜平面」
+  // 各片平面按球面均匀方向错开，所以整体不是一个平面盘，而是球状的轨道网络
+  var orbitGroups = [];
+  function buildGroups(){
+    var mains = [];
+    nodes.forEach(function(n){ if (n.kind === "main") mains.push(n); });
+    mains.sort(function(a,b){ return (a.s.created||a.s.last) - (b.s.created||b.s.last); }); // 旧 → 新
+    var PER = 12;
+    var N = Math.max(1, Math.ceil(mains.length / PER));
+    var span = Math.max(1, t1-t0);
+    var R0 = orbitInner(), Rmax = orbitSpan();
+    orbitGroups = [];
+    for (var gi=0; gi<N; gi++){
+      var mem = mains.slice(gi*PER, (gi+1)*PER);
+      if (!mem.length) break;
+      var lat = (-1 + 2*(gi+0.5)/N) * 0.55;            // 纬度 ±31°：有立体感又不翻到背面
+      var lon = gi * 2.3999632297;                     // 黄金角，方位均匀错开
+      var nrm = [Math.cos(lat)*Math.cos(lon), Math.sin(lat), Math.cos(lat)*Math.sin(lon)];
+      var ref = Math.abs(nrm[1]) > 0.9 ? [1,0,0] : [0,1,0];
+      var u = vnorm(vcross(nrm, ref));
+      var v = vnorm(vcross(nrm, u));
+      var tmid = 0;
+      mem.forEach(function(x){ tmid += (x.s.created||x.s.last); });
+      tmid /= mem.length;
+      var u01 = clamp((tmid - t0)/span, 0, 1);
+      var R = R0 + (N > 1 ? (1-gi/(N-1)) : 0.5) * Rmax;        // 组半径 = 组的时间中点 → 内旧外新
+      orbitGroups.push({ u:u, v:v, R:R, mem:mem });
+      mem.forEach(function(x, k){
+        x.gi = gi; x.gu = u; x.gv = v;
+        x.orbR = R;
+        x.orbA = (k + 0.5)/mem.length * TAU + gi*1.73;  // 组内沿轨道排开
+        x.orbW = 0.10 * Math.pow(R0 / R, 0.55);          // 内快外慢
+      });
+    }
+  }
+
+  function layoutOrbit(){
+    var span = Math.max(1, t1-t0);
+    nodes.forEach(function(n){
+      n.hasSub = false; n.subR0 = 0;
+      if (n.kind === "gone") {
+        n.tbx = W*0.5 + (h01(n.id)-0.5)*W*0.6;
+        n.tby = H*0.94 + (h01(n.id+"g")-0.5)*26;
+        n.orbR = orbitOuter()*1.3 + h01(n.id)*50;
+        n.orbA = h01(n.id+"a")*TAU;
+        n.orbW = 0; n.rec = 0;
+        return;
+      }
+      n.rec = clamp(((n.s.created||n.s.last) - t0)/span, 0, 1); // 1 = 最新
+    });
+    buildGroups();
+    // 子代理 = 卫星：绕父星公转，平面跟父星同一个（地球-月球）
+    // 按 depth 升序处理，保证「父星先拿到平面」，嵌套子代理也能继承
+    var subs = nodes.filter(function(n){ return n.kind === "sub"; });
+    subs.sort(function(a,b){ return (a.s.depth||1) - (b.s.depth||1); });
+    subs.forEach(function(n){
+      var p = parentOf(n);
+      n.pNode = p || null;
+      n.sR = 18 + h01(n.id+"sr")*12;                  // 绕父半径 16~34
+      n.sA = h01(n.id+"sa")*TAU;                      // 初始相位
+      n.sW = (0.55 + h01(n.id+"sw")*0.55) * (h01(n.id+"dir") > 0.5 ? 1 : -1);
+      if (p && p.gu){
+        n.gu = p.gu; n.gv = p.gv;
+        n.orbR = p.orbR; n.orbA = p.orbA; n.orbW = 0; // 卫星不跟父星的角速度，自己绕
+        if (p.kind === "main" && (!p.hasSub || p.subR0 < n.sR)) { p.hasSub = true; p.subR0 = n.sR; }
+      } else {
+        // 找不到父星（或父星没有平面）：给一条自己的兜底轨道，别让它堆到球心
+        n.pNode = null;
+        n.gu = [1,0,0]; n.gv = [0,0,1];
+        n.orbR = orbitInner() + h01(n.id)*orbitSpan();
+        n.orbA = h01(n.id+"a")*TAU; n.orbW = 0.05;
+      }
+    });
+  }
+
+  /* ---------------- 3D 轨道数学 ---------------- */
+  function vnorm(v){ var L = Math.hypot(v[0],v[1],v[2]) || 1; return [v[0]/L, v[1]/L, v[2]/L]; }
+  function vcross(a,b){ return [a[1]*b[2]-a[2]*b[1], a[2]*b[0]-a[0]*b[2], a[0]*b[1]-a[1]*b[0]]; }
+
+  // 世界坐标（3D）：主星在「小组平面」上绕中心转；卫星 = 父星位置 + 父星平面上的小圆周
+  function worldOf(n){
+    if (n.kind === "sub" && n.pNode){
+      var pw = worldOf(n.pNode);
+      var ca = Math.cos(n.sA), sa = Math.sin(n.sA);
+      var u = n.gu || [1,0,0], v = n.gv || [0,0,1];
+      return [ pw[0] + n.sR*(ca*u[0] + sa*v[0]),
+               pw[1] + n.sR*(ca*u[1] + sa*v[1]),
+               pw[2] + n.sR*(ca*u[2] + sa*v[2]) ];
+    }
+    if (n.kind === "gone" || !n.orbR) return [0,0,0];
+    var a = n.orbA, R = n.orbR;
+    var uu = n.gu || [1,0,0], vv = n.gv || [0,0,1];
+    var c = Math.cos(a), s = Math.sin(a);
+    return [ R*(c*uu[0] + s*vv[0]),
+             R*(c*uu[1] + s*vv[1]),
+             R*(c*uu[2] + s*vv[2]) ];
+  }
+
+  // 3D 世界坐标 → 屏幕（透视投影）：先绕 Y、再绕 X，最后做透视除法
+  function project3(w){
+    var cY = Math.cos(state.rotY), sY = Math.sin(state.rotY);
+    var cX = Math.cos(state.rotX), sX = Math.sin(state.rotX);
+    var x = w[0] - state.camX, y = w[1] - state.camY, z = w[2] - state.camZ;
+    var x1 = x*cY + z*sY;
+    var z1 = -x*sY + z*cY;
+    var y2 = y*cX - z1*sX;
+    var z2 = y*sX + z1*cX;
+    var s = state.fov / (state.fov + z2) * state.zoom;
+    return [W*0.5 + x1*s, H*0.5 + y2*s, z2, s];
+  }
+
+  // 兼容旧调用：水平面上的点
+  function projectPlanar(x0, z0){ return project3([x0, 0, z0]); }
+
+  function projectOrbit(n){
+    if (n.kind === "gone") { n.px = n.tbx; n.py = n.tby; n.ps = 1; n.pz = 0; return; }
+    var q = project3(worldOf(n));
+    n.px = q[0]; n.py = q[1]; n.pz = q[2]; n.ps = q[3];
+  }
+
+  // 基准水平面上的轨道点（日期刻度环用）
+  function orbitPoint(R, a){
+    var q = project3([R*Math.cos(a), 0, R*Math.sin(a)]);
+    return [q[0], q[1], q[2]];
+  }
+
+  // 某颗星所在「小组平面」上的轨道点（画它自己的轨道 / 拖尾用）
+  function orbitPointOf(n, a){
+    var u = n.gu || [1,0,0], v = n.gv || [0,0,1];
+    var c = Math.cos(a), s = Math.sin(a), R = n.orbR;
+    var q = project3([R*(c*u[0] + s*v[0]), R*(c*u[1] + s*v[1]), R*(c*u[2] + s*v[2])]);
+    return [q[0], q[1], q[2]];
+  }
+
+  // 镜头的世界坐标（某颗星当前所在的位置，投影到水平面）
+  function starWorld(n){
+    var w = worldOf(n);
+    return [w[0], w[2]];
+  }
+  // 聚焦：镜头飞向某颗星；传 null 回到中心全景
+  function focusOn(n, z){
+    if (!n || n.kind === "gone") {
+      state.focusStar = null;
+      state.tCamX = 0; state.tCamY = 0; state.tCamZ = 0; state.tZoom = 1;
+      return;
+    }
+    state.focusStar = n;
+    var w = worldOf(n);
+    state.tCamX = w[0]; state.tCamY = w[1]; state.tCamZ = w[2];
+    state.tZoom = z || 2.1;
+  }
+
+  /* ---------------- 相似度（星座连线） ---------------- */
+  var STOP = ("的 了 和 是 在 我 你 他 她 它 这 那 有 就 也 都 还 要 想 能 会 把 被 让 给 对 与 及 或 但 而 不 没 很 太 更 最 再 又 才 只 些 个 中 上 下 里 外 前 后 吗 呢 吧 啊 呀 哦 嗯 什么 怎么 为什么 如何 一个 一些 这个 那个 可以 需要 应该 现在 已经 还是 然后 因为 所以 如果 但是 我们 你们 他们").split(" ");
+  var stopSet = {}; STOP.forEach(function(w){ stopSet[w]=1; });
+
+  function tokenize(text){
+    var out = {}, s = (text||"").toLowerCase();
+    var en = s.match(/[a-z][a-z0-9_\-]{1,24}/g) || [];
+    en.forEach(function(w){ if(!stopSet[w] && w.length>2) out[w]=1; });
+    var cn = s.replace(/[^\u4e00-\u9fa5]+/g," ").split(" ");
+    cn.forEach(function(seg){
+      if (seg.length < 2) return;
+      if (seg.length <= 4 && !stopSet[seg]) { out[seg]=1; return; }
+      for (var i=0;i<seg.length-1;i++){
+        var bg = seg.substr(i,2);
+        if (!stopSet[bg]) out[bg]=1;
+      }
+    });
+    return out;
+  }
+
+  var neighborMap = {};
+  (function buildNeighbors(){
+    var toks = {}, df = {};
+    mainStars.forEach(function(s){
+      var tk = tokenize((s.title||"")+" "+(s.firstUser||""));
+      toks[s.id] = tk;
+      Object.keys(tk).forEach(function(k){ df[k] = (df[k]||0)+1; });
+    });
+    var N = mainStars.length;
+    var vecs = {};
+    mainStars.forEach(function(s){
+      var v = {}, tk = toks[s.id];
+      Object.keys(tk).forEach(function(k){ v[k] = Math.log(1 + N/(df[k]||1)); });
+      var norm = 0; Object.keys(v).forEach(function(k){ norm += v[k]*v[k]; });
+      vecs[s.id] = { v:v, n:Math.sqrt(norm)||1 };
+    });
+    mainStars.forEach(function(s){
+      var a = vecs[s.id], best = [];
+      mainStars.forEach(function(o){
+        if (o.id === s.id) return;
+        var b = vecs[o.id], dot = 0;
+        for (var k in a.v) if (b.v[k]) dot += a.v[k]*b.v[k];
+        var sim = dot/(a.n*b.n);
+        var sameDay = Math.abs((s.created||0)-(o.created||0)) < 86400000 && s.project===o.project;
+        if (sameDay) sim += 0.08;
+        if (sim > 0.12) best.push([sim, o.id]);
+      });
+      best.sort(function(x,y){ return y[0]-x[0]; });
+      neighborMap[s.id] = best.slice(0,3).map(function(x){ return x[1]; });
+    });
+  })();
+
+  /* ---------------- 星星精灵 ---------------- */
+  function makeSprite(hex){
+    var S = 128, c = document.createElement("canvas");
+    c.width = c.height = S;
+    var g = c.getContext("2d");
+    var grad = g.createRadialGradient(S/2,S/2,0,S/2,S/2,S/2);
+    grad.addColorStop(0, "rgba(255,255,255,1)");
+    grad.addColorStop(0.06, "rgba(255,255,255,0.96)");
+    grad.addColorStop(0.13, rgba(hex,0.92));
+    grad.addColorStop(0.26, rgba(hex,0.36));
+    grad.addColorStop(0.48, rgba(hex,0.08));
+    grad.addColorStop(0.78, rgba(hex,0.015));
+    grad.addColorStop(1, rgba(hex,0));
+    g.fillStyle = grad; g.beginPath(); g.arc(S/2,S/2,S/2,0,TAU); g.fill();
+    return c;
+  }
+  var spriteCache = {};
+  function spriteOf(hex){
+    if (!spriteCache[hex]) spriteCache[hex] = makeSprite(hex);
+    return spriteCache[hex];
+  }
+
+  // 球体精灵：左上受光 + 边缘压暗 + 一圈「大气」微光
+  // 对话星要看起来是天体，而不是一个发光圆点 —— 这是和参考站最直接的观感差距
+  function makeBall(hex){
+    var S = 168, R = S*0.40, cx = S/2, cy = S/2;
+    var c = document.createElement("canvas");
+    c.width = c.height = S;
+    var g = c.getContext("2d");
+    var col = hex2rgb(hex);
+    function lift(k, up){
+      return "rgb("+Math.min(255,Math.round(col[0]*k + up))+","+
+                     Math.min(255,Math.round(col[1]*k + up))+","+
+                     Math.min(255,Math.round(col[2]*k + up))+")";
+    }
+    // 本体
+    var gr = g.createRadialGradient(cx-R*0.44, cy-R*0.48, R*0.05, cx, cy, R*1.02);
+    gr.addColorStop(0, "rgb(255,255,255)");
+    gr.addColorStop(0.18, lift(1.0, 46));
+    gr.addColorStop(0.52, lift(0.94, 6));
+    gr.addColorStop(0.82, lift(0.55, 0));
+    gr.addColorStop(1, lift(0.20, 0));
+    g.fillStyle = gr; g.beginPath(); g.arc(cx,cy,R,0,TAU); g.fill();
+    // 大气/边缘微光
+    var lr = g.createRadialGradient(cx,cy,R*0.84,cx,cy,R*1.22);
+    lr.addColorStop(0, rgba(hex,0));
+    lr.addColorStop(0.58, rgba(hex,0.30));
+    lr.addColorStop(1, rgba(hex,0));
+    g.fillStyle = lr; g.beginPath(); g.arc(cx,cy,R*1.22,0,TAU); g.fill();
+    return c;
+  }
+  var ballCache = {};
+  function ballOf(hex){
+    if (!ballCache[hex]) ballCache[hex] = makeBall(hex);
+    return ballCache[hex];
+  }
+
+  // 散景光斑：大星周围固定的几粒小光点（预生成偏移，不每帧随机）
+  function bokehOf(n){
+    if (n._bok) return n._bok;
+    var arr = [], k = 3 + Math.floor(h01(n.id+"bk")*4);
+    for (var i=0;i<k;i++){
+      var a0 = h01(n.id+"ba"+i)*TAU;
+      var rr = 1.35 + h01(n.id+"br"+i)*3.6;
+      arr.push([
+        Math.cos(a0)*rr, Math.sin(a0)*rr,
+        0.10 + h01(n.id+"bs"+i)*0.20,      // 透明度
+        0.45 + h01(n.id+"bd"+i)*0.95       // 大小系数
+      ]);
+    }
+    n._bok = arr; return arr;
+  }
+  function drawBokeh(n, x, y, size, a){
+    var arr = bokehOf(n), spr = spriteOf("#ffffff");
+    for (var i=0;i<arr.length;i++){
+      var o = arr[i], bs = Math.max(1.2, size*o[3]*0.40);
+      ctx.globalAlpha = clamp(a*o[2], 0, 1);
+      ctx.drawImage(spr, x + o[0]*size - bs/2, y + o[1]*size - bs/2, bs, bs);
+    }
+  }
+
+  // 宽字距文本（canvas 没有 letter-spacing，逐字画）
+  function twOf(c, text, sp){
+    var w = 0;
+    for (var i=0;i<text.length;i++) w += c.measureText(text[i]).width + sp;
+    return w;
+  }
+  function tracked(c, x, y, text, sp, fill){
+    c.fillStyle = fill;
+    for (var i=0;i<text.length;i++){
+      c.fillText(text[i], x, y);
+      x += c.measureText(text[i]).width + sp;
+    }
+  }
+
+  // 动态星尘：不写进预渲染背景，每帧重画 —— 会呼吸、会随鼠标产生近大远小的视差
+  var dust = [];
+  (function(){
+    for (var i=0;i<380;i++){
+      var z = 0.25 + Math.random()*0.75;           // 深度：1 最近
+      dust.push({
+        x:Math.random(), y:Math.random(),
+        r: 0.32 + Math.pow(Math.random(), 1.8) * 1.9,   // 大部分是细尘，少数大颗
+        a: 0.08 + Math.random()*0.55,
+        ph: Math.random()*TAU,
+        sp: 0.35 + Math.random()*1.1,
+        z: z,
+        vx: (Math.random()-0.5)*0.010,             // 极慢漂移
+        vy: (Math.random()-0.5)*0.007,
+        tint: Math.random()
+      });
+    }
+  })();
+
+  /* ---------------- 宇宙背景：程序化噪声星云（离屏预渲染，只在 resize 时重画） ---------------- */
+  var bgCanvas = null, BG_PAD = 10;
+
+  // 哈希 → 值噪声 → 分形叠加（fbm）：这是让星云"有结构"而不是一团糊的关键
+  function hash2(x, y){
+    var n = (x|0)*374761393 + (y|0)*668265263;
+    n = (n ^ (n >> 13)) * 1274126177;
+    return ((n ^ (n >> 16)) >>> 0) / 4294967295;
+  }
+  function vnoise(x, y){
+    var xi = Math.floor(x), yi = Math.floor(y);
+    var xf = x - xi, yf = y - yi;
+    var u = xf*xf*(3-2*xf), v = yf*yf*(3-2*yf);
+    var a = hash2(xi, yi), b = hash2(xi+1, yi);
+    var c = hash2(xi, yi+1), d = hash2(xi+1, yi+1);
+    return a*(1-u)*(1-v) + b*u*(1-v) + c*(1-u)*v + d*u*v;
+  }
+  function fbm(x, y, oct){
+    var sum = 0, amp = 0.5, f = 1, norm = 0;
+    for (var i=0;i<oct;i++){
+      sum += amp * vnoise(x*f, y*f);
+      norm += amp; f *= 2.03; amp *= 0.5;
+    }
+    return sum / norm;
+  }
+
+  function buildBackground(){
+    var cw = W + BG_PAD*2, ch = H + BG_PAD*2;
+    var c = document.createElement("canvas");
+    c.width = Math.max(1, Math.round(cw*DPR));
+    c.height = Math.max(1, Math.round(ch*DPR));
+    var g = c.getContext("2d");
+    g.setTransform(DPR,0,0,DPR,0,0);
+
+    // 1. 近黑底
+    g.fillStyle = "#04050b";
+    g.fillRect(0,0,cw,ch);
+
+    // 2. 星云主体：紫红星云 + 蓝色辉光 + 橙棕暗尘 + 亮核
+    var SW = 3;
+    var sw = Math.max(8, Math.ceil(cw/SW)), sh = Math.max(8, Math.ceil(ch/SW));
+    var nc = document.createElement("canvas");
+    nc.width = sw; nc.height = sh;
+    var nctx = nc.getContext("2d");
+    var img = nctx.createImageData(sw, sh);
+    var d = img.data;
+
+    for (var y=0;y<sh;y++){
+      for (var x=0;x<sw;x++){
+        var nx = x/sw, ny = y/sh;
+
+        // 四个噪声通道：云主体、蓝色辉光、细丝、暗尘
+        var f1 = fbm(nx*2.2, ny*2.2, 6);
+        var f2 = fbm(nx*5.1 + 7.7, ny*5.1 - 3.3, 5);
+        var f3 = fbm(nx*11.0 - 4.2, ny*11.0 + 9.1, 4);
+        var dust = fbm(nx*3.4 + 17.2, ny*3.4 + 5.5, 4);
+
+        // 大尺度光场：让星云集中在一片，四周沉入黑暗（照片感的关键）
+        var gx = (nx - 0.42)*1.9, gy = (ny - 0.46)*1.5;
+        var glow = Math.exp(-(gx*gx + gy*gy)*1.25);
+
+        var cloud = clamp((f1*0.60 + f2*0.40 - 0.40) / 0.50, 0, 1);
+        cloud = cloud * (0.45 + 1.75*glow) * (0.62 + 0.86*f3);
+        // 中心留白：太阳附近别被云气糊住
+        var rrm = Math.hypot(nx - 0.5, ny - 0.5);
+        cloud *= clamp((rrm - 0.05)/0.26, 0.12, 1);
+
+        // 暗尘遮光：dust 高的地方压黑，形成丝状暗带
+        var dustMask = clamp(1 - clamp((dust - 0.44)*3.1, 0, 0.88), 0.12, 1);
+
+        // 三色分量：星云只留一层极淡底纹（NEB 压到 0.32），主角是星点与对话星
+        var NEB = 0.32;
+        var purple = clamp((f2 - 0.43)*2.6, 0, 1) * cloud;
+        var blue   = clamp((f1 - 0.47)*2.4, 0, 1) * cloud;
+        var hot    = clamp((cloud - 0.48)*3.4, 0, 1) * clamp((f3 - 0.26)*2.4, 0, 1);
+        var warmD  = clamp((dust - 0.60)*3.2, 0, 1) * (1 - cloud*0.5) * 0.55;
+
+        var R = 4  + (purple*268 + blue*54  + hot*252 + warmD*150) * NEB;
+        var G = 4  + (purple*84  + blue*158 + hot*232 + warmD*74)  * NEB;
+        var B = 11 + (purple*200 + blue*255 + hot*242 + warmD*32)  * NEB;
+
+        R *= dustMask; G *= dustMask; B *= dustMask;
+
+        var idx = (y*sw + x)*4;
+        d[idx]   = clamp(R, 0, 255);
+        d[idx+1] = clamp(G, 0, 255);
+        d[idx+2] = clamp(B, 0, 255);
+        d[idx+3] = 255;
+      }
+    }
+    nctx.putImageData(img, 0, 0);
+    g.globalCompositeOperation = "lighter";
+    g.imageSmoothingEnabled = true;
+    g.drawImage(nc, 0, 0, cw, ch);
+
+    // 3. 亮核辉光：几处星云最亮的团，像照片里的高光
+    g.globalCompositeOperation = "lighter";
+    var cores = [
+      [0.30,0.34, 0.24, "255,196,220", 0.15],
+      [0.62,0.56, 0.20, "196,222,255", 0.13],
+      [0.46,0.74, 0.17, "255,170,150", 0.10]
+    ];
+    cores.forEach(function(k){
+      var cx2 = k[0]*cw, cy2 = k[1]*ch, r2 = k[2]*Math.max(cw,ch);
+      var gr = g.createRadialGradient(cx2,cy2,0,cx2,cy2,r2);
+      gr.addColorStop(0, "rgba("+k[3]+","+k[4]+")");
+      gr.addColorStop(0.45, "rgba("+k[3]+","+(k[4]*0.25).toFixed(3)+")");
+      gr.addColorStop(1, "rgba("+k[3]+",0)");
+      g.fillStyle = gr; g.fillRect(0,0,cw,ch);
+    });
+
+    // 4. 满屏恒星：远层极密极暗做底，近层稀疏但更亮 —— 星星要"铺满"，不能只挤在中间
+    for (var j=0;j<26000;j++){
+      var dx2 = Math.random()*cw, dy2 = Math.random()*ch;
+      var a3 = 0.022 + Math.random()*0.15;
+      var s3 = 0.3 + Math.random()*0.5;
+      g.fillStyle = "rgba(214,226,255,"+a3.toFixed(3)+")";
+      g.fillRect(dx2, dy2, s3, s3);
+    }
+    for (var j2=0;j2<7200;j2++){
+      var dx3 = Math.random()*cw, dy3 = Math.random()*ch;
+      var r4 = Math.random();
+      var s4 = r4 < 0.86 ? 0.4+Math.random()*0.6 : 0.9+Math.random()*1.15;
+      var a4 = 0.06 + Math.random()*0.42;
+      var tint = Math.random();
+      g.fillStyle = tint < 0.60 ? "rgba(228,236,255,"+a4.toFixed(3)+")"
+                  : tint < 0.80 ? "rgba(255,248,226,"+(a4*0.95).toFixed(3)+")"
+                  : tint < 0.93 ? "rgba(200,214,255,"+a4.toFixed(3)+")"
+                  : "rgba(255,210,196,"+(a4*0.85).toFixed(3)+")";
+      g.fillRect(dx3, dy3, s4, s4);
+    }
+
+    // 5. 亮星：光晕 + 四芒衍射（照片里最抓眼的就是这些十字星）
+    for (var k2=0;k2<175;k2++){
+      var lx = Math.random()*cw, ly = Math.random()*ch;
+      var big = Math.random() < 0.17;
+      var la = big ? 0.28+Math.random()*0.34 : 0.12+Math.random()*0.20;
+      var lr = big ? 3.8+Math.random()*5.6 : 1.7+Math.random()*2.5;
+      var lg = g.createRadialGradient(lx,ly,0,lx,ly,lr);
+      lg.addColorStop(0, "rgba(255,255,255,"+la.toFixed(3)+")");
+      lg.addColorStop(0.4, "rgba(226,238,255,"+(la*0.35).toFixed(3)+")");
+      lg.addColorStop(1, "rgba(190,210,255,0)");
+      g.fillStyle = lg; g.beginPath(); g.arc(lx,ly,lr,0,TAU); g.fill();
+      if (big) {
+        var L2 = lr*3.0;
+        g.strokeStyle = "rgba(236,244,255,"+(la*0.55).toFixed(3)+")";
+        g.lineWidth = 0.7;
+        g.beginPath();
+        g.moveTo(lx-L2, ly); g.lineTo(lx+L2, ly);
+        g.moveTo(lx, ly-L2); g.lineTo(lx, ly+L2);
+        g.stroke();
+      }
+    }
+
+    // 6. 暗角：压一点边，但别把四周的星压没了
+    g.globalCompositeOperation = "source-over";
+    var vg = g.createRadialGradient(cw*0.5, ch*0.5, Math.min(cw,ch)*0.40, cw*0.5, ch*0.5, Math.max(cw,ch)*0.84);
+    vg.addColorStop(0, "rgba(0,0,0,0)");
+    vg.addColorStop(0.60, "rgba(0,0,0,0.10)");
+    vg.addColorStop(1, "rgba(0,0,0,0.56)");
+    g.fillStyle = vg; g.fillRect(0,0,cw,ch);
+
+    bgCanvas = c;
+  }
+
+  /* ---------------- 视图变换 ---------------- */
+  function toScreen(x,y){
+    if (state.layout !== "time") return [x,y];
+    return [ (x - W/2)*state.scale + W/2 + state.panX, y ];
+  }
+
+  /* ---------------- 尺寸 ---------------- */
+  function resize(){
+    W = innerWidth; H = innerHeight; DPR = Math.min(2, devicePixelRatio||1);
+    if(webgl) webgl.resize(W,H,DPR);
+    canvas.width = Math.round(W*DPR); canvas.height = Math.round(H*DPR);
+    canvas.style.width = W+"px"; canvas.style.height = H+"px";
+    ctx.setTransform(DPR,0,0,DPR,0,0);
+    if(!webgl || state.layout !== "ball") buildBackground();
+    relayout(false);
+  }
+  addEventListener("resize", function(){
+    if (resize._t) clearTimeout(resize._t);
+    resize._t = setTimeout(resize, 160);
+  });
+
+  /* ---------------- 交互命中 ---------------- */
+  function pick(mx,my){
+    var best = null, bestD = Infinity;
+    var ball = state.layout === "ball";
+    for (var i=0;i<nodes.length;i++){
+      var n = nodes[i];
+      if (n.kind === "sub" && !state.showSubs) continue;
+      if (n.kind === "gone" && !state.showGone) continue;
+      if (n.kind !== "gone" && (n.s.created||0) > state.cutoff) continue;
+      if (state.filter === "fav" && !n.fav) continue;
+      if (isIntroing(n) || !n.visible || (state.q && !n.match)) continue;
+      var p = ball ? [n.px, n.py] : toScreen(n.bx,n.by);
+      var dx = mx-p[0], dy = my-p[1];
+      var d = dx*dx+dy*dy;
+      var hit = Math.max(7, ball && webgl ? (n.screenRadius||5)+4 : n.r*1.15); hit *= hit;
+      var score = d / hit + (ball ? Math.max(0,n.pz)*0.00001 : 0); // 前面的星优先
+      if (d < hit && score < bestD){ bestD = score; best = n; }
+    }
+    return best;
+  }
+
+  /* ---------------- 绘制 ---------------- */
+  var lastTs = 0, tsec = 0;
+
+  function drawBg(){
+    var parX = (mx/W - 0.5), parY = (my/H - 0.5);
+    if (bgCanvas) {
+      var ox = -parX*34, oy = -parY*26; // 鼠标视差（背景整层轻微浮动）
+      ctx.drawImage(bgCanvas, ox-BG_PAD, oy-BG_PAD, W+BG_PAD*2, H+BG_PAD*2);
+    } else {
+      ctx.fillStyle = "#02030a"; ctx.fillRect(0,0,W,H);
+    }
+    // 动态星尘：越近越亮越大、视差位移越明显，还带缓慢漂移和呼吸闪烁
+    for (var j=0;j<dust.length;j++){
+      var d = dust[j];
+      var driftX = Math.sin(tsec*0.13*d.sp + d.ph) * 0.0022 * d.z + d.vx*tsec;
+      var driftY = Math.cos(tsec*0.10*d.sp + d.ph*1.7) * 0.0016 * d.z + d.vy*tsec;
+      var ux = d.x + driftX - parX*0.028*d.z;
+      var uy = d.y + driftY - parY*0.022*d.z;
+      ux = ux - Math.floor(ux); uy = uy - Math.floor(uy);
+      var tw = 0.32 + 0.68*Math.abs(Math.sin(tsec*d.sp + d.ph));
+      var a = clamp(d.a * tw * (0.55 + 0.45*d.z), 0, 1);
+      var rr = d.r * (0.72 + 0.55*d.z);
+      var col = d.tint < 0.62 ? "214,230,255" : d.tint < 0.84 ? "255,246,222" : d.tint < 0.95 ? "196,214,255" : "255,208,190";
+      ctx.fillStyle = "rgba("+col+","+a.toFixed(3)+")";
+      ctx.beginPath(); ctx.arc(ux*W, uy*H, rr, 0, TAU); ctx.fill();
+      // 最近的那几颗加一点柔光，像真的朝你浮过来
+      if (d.z > 0.86 && a > 0.4) {
+        ctx.globalAlpha = a*0.22;
+        ctx.drawImage(spriteOf("#cfe0ff"), ux*W-rr*4.2, uy*H-rr*4.2, rr*8.4, rr*8.4);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // 中心太阳：暖白光核 + 光晕 + 缓慢旋转的光芒
+  function drawCore(){
+    if (state.layout !== "ball") return;
+    var cx = W*0.5, cy = H*0.5;
+    var pulse = 0.9 + 0.10*Math.sin(tsec*1.25);
+
+    var R = Math.min(W,H)*0.155;
+    var g = ctx.createRadialGradient(cx,cy,0,cx,cy,R);
+    g.addColorStop(0, "rgba(255,242,214,"+(0.54*pulse).toFixed(3)+")");
+    g.addColorStop(0.14, "rgba(255,214,158,"+(0.25*pulse).toFixed(3)+")");
+    g.addColorStop(0.44, "rgba(255,178,112,0.055)");
+    g.addColorStop(1, "rgba(255,150,80,0)");
+    ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx,cy,R,0,TAU); ctx.fill();
+
+    // 八道很淡的放射光芒
+    ctx.save();
+    ctx.translate(cx,cy);
+    ctx.rotate(tsec*0.05);
+    for (var k=0;k<8;k++){
+      var a = k*TAU/8;
+      var lg = ctx.createLinearGradient(0,0,Math.cos(a)*R*1.5, Math.sin(a)*R*1.5);
+      lg.addColorStop(0, "rgba(255,232,188,"+(0.075*pulse).toFixed(3)+")");
+      lg.addColorStop(1, "rgba(255,206,142,0)");
+      ctx.strokeStyle = lg; ctx.lineWidth = 1.1;
+      ctx.beginPath(); ctx.moveTo(0,0); ctx.lineTo(Math.cos(a)*R*1.5, Math.sin(a)*R*1.5); ctx.stroke();
+    }
+    ctx.restore();
+
+    // 核
+    var cg = ctx.createRadialGradient(cx,cy,0,cx,cy,22);
+    cg.addColorStop(0, "rgba(255,255,252,1)");
+    cg.addColorStop(0.30, "rgba(255,246,224,0.94)");
+    cg.addColorStop(1, "rgba(255,206,150,0)");
+    ctx.fillStyle = cg; ctx.beginPath(); ctx.arc(cx,cy,22,0,TAU); ctx.fill();
+  }
+
+  // 同心轨道环：每个月一条，像太阳系仪
+  var gradCache = { key:"", arr:[] };
+  function drawOrbitRings(){
+    if (state.layout !== "ball") return;
+    var gkey = W + "x" + H;
+    if (gradCache.key !== gkey){ gradCache.key = gkey; gradCache.arr = []; gradCache.core = null; }
+    var span = Math.max(1, t1-t0);
+    var R0 = orbitInner(), Rmax = orbitSpan();
+    var months = {};
+    nodes.forEach(function(n){
+      if (n.kind === "gone") return;
+      var d = new Date(n.s.created || n.s.last);
+      var key = d.getFullYear()*12 + d.getMonth();
+      if (!months[key]) months[key] = d;
+    });
+    ctx.save();
+    // 球体本身的光雾：预渲染到离屏画布，每帧只做一次位图拷贝（否则 41fps）
+    if (!gradCache.glow || gradCache.glowKey !== gkey){
+      var gc = document.createElement("canvas");
+      gc.width = Math.round(W*DPR); gc.height = Math.round(H*DPR);
+      var gx = gc.getContext("2d");
+      gx.setTransform(DPR,0,0,DPR,0,0);
+      var coreG = gx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, Math.max(W,H)*0.52);
+      coreG.addColorStop(0,    "rgba(152,186,255,0.060)");
+      coreG.addColorStop(0.45, "rgba(96,130,225,0.030)");
+      coreG.addColorStop(0.78, "rgba(58,84,178,0.012)");
+      coreG.addColorStop(1,    "rgba(30,44,110,0)");
+      gx.fillStyle = coreG;
+      gx.beginPath(); gx.arc(W*0.5, H*0.5, Math.max(W,H)*0.52, 0, TAU); gx.fill();
+      gradCache.glow = gc; gradCache.glowKey = gkey;
+    }
+    ctx.drawImage(gradCache.glow, 0, 0, W, H);
+    ctx.font = "11px 'Microsoft YaHei',sans-serif";
+    ctx.textAlign = "left";
+    // 每 2 天一条细环，形成太阳系仪的密集轨道（环越密，「轨道」感越强）
+    var DAY = 86400000;
+    var nRings = clamp(Math.ceil(span / (2*DAY)), 12, 64);
+    for (var ri=1; ri<=nRings; ri++){
+      var tt = t0 + (span * ri) / (nRings + 0.6);
+      var ageR = 1 - clamp((tt - t0)/span, 0, 1);
+      var Rr = (R0 + Math.pow(ageR, 0.88) * Rmax);
+      ctx.beginPath();
+      for (var i2=0;i2<=64;i2++){
+        var pp = orbitPoint(Rr, i2/64*TAU);
+        if (i2===0) ctx.moveTo(pp[0],pp[1]); else ctx.lineTo(pp[0],pp[1]);
+      }
+      // 日期刻度环退到背景层：主角是每个小组自己的立体轨道
+      var ringA = 0.026 + 0.028 * (ri / nRings);
+      ctx.strokeStyle = "rgba(206,218,246," + ringA.toFixed(3) + ")";
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+    }
+    // 月份环（略亮 + 标注）
+    Object.keys(months).forEach(function(k){
+      var d = months[k];
+      var u = clamp((new Date(d.getFullYear(), d.getMonth(), 1).getTime() - t0)/span, 0, 1);
+      var R = (R0 + Math.pow(1-u, 0.88) * Rmax);
+      ctx.beginPath();
+      for (var i=0;i<=90;i++){
+        var p = orbitPoint(R, i/90*TAU);
+        if (i===0) ctx.moveTo(p[0],p[1]); else ctx.lineTo(p[0],p[1]);
+      }
+      ctx.strokeStyle = "rgba(224,234,252,0.17)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      var lp = orbitPoint(R, 0);
+      if (lp[0] > 60 && lp[0] < W-80 && lp[1] > 60 && lp[1] < H-70) {
+        ctx.fillStyle = "rgba(188,200,222,0.55)";
+        ctx.fillText((d.getMonth()+1)+"月", lp[0]+6, lp[1]-4);
+      }
+    });
+
+    // 每个「小组」一条立体轨道：轨道面填一层极淡的渐变盘（多层叠加 → 球有体积），再画内外双层线
+    orbitGroups.forEach(function(g, gidx){
+      var gp2 = gidx / Math.max(1, orbitGroups.length);
+      var hh = 202 + gp2 * 66;                       // 青 → 紫，跟着现有配色走
+      ctx.beginPath();
+      for (var k2=0;k2<=72;k2++){
+        var aa2 = k2/72*TAU;
+        var c2 = Math.cos(aa2), s2 = Math.sin(aa2);
+        var pt2 = project3([ g.R*(c2*g.u[0] + s2*g.v[0]),
+                             g.R*(c2*g.u[1] + s2*g.v[1]),
+                             g.R*(c2*g.u[2] + s2*g.v[2]) ]);
+        if (k2===0) ctx.moveTo(pt2[0],pt2[1]); else ctx.lineTo(pt2[0],pt2[1]);
+      }
+      ctx.closePath();
+      var rg = gradCache.arr[gidx];
+      if (!rg){
+        rg = ctx.createRadialGradient(W*0.5, H*0.5, 0, W*0.5, H*0.5, Math.max(W,H)*0.55);
+        rg.addColorStop(0,    "hsla(" + hh + ",62%,64%,0.034)");   // 靠近太阳的盘心被照亮
+        rg.addColorStop(0.5,  "hsla(" + hh + ",62%,66%,0.015)");
+        rg.addColorStop(1,    "hsla(" + hh + ",64%,72%,0.004)");   // 盘缘几乎融进深空
+        gradCache.arr[gidx] = rg;
+      }
+      ctx.fillStyle = rg;
+      ctx.fill();
+      ctx.strokeStyle = "hsla(" + hh + ",66%,72%,0.075)";   // 外层柔光，像盘缘发亮
+      ctx.lineWidth = 2.6;
+      ctx.stroke();
+      ctx.strokeStyle = "hsla(" + hh + ",70%,82%,0.18)";    // 内层细线
+      ctx.lineWidth = 0.7;
+      ctx.stroke();
+    });
+
+    // 有卫星的父星：在它自己的平面里画一圈很小的虚线「卫星轨道」（地球-月球）
+    ctx.setLineDash([2,3]);
+    ctx.strokeStyle = "rgba(210,226,255,0.085)";
+    ctx.lineWidth = 0.7;
+    nodes.forEach(function(sn){
+      if (sn.kind !== "main" || !sn.hasSub) return;
+      var w = worldOf(sn);
+      ctx.beginPath();
+      for (var k3=0;k3<=40;k3++){
+        var aa3 = k3/40*TAU;
+        var c3 = Math.cos(aa3), s3 = Math.sin(aa3);
+        var pt3 = project3([ w[0] + sn.subR0*(c3*sn.gu[0] + s3*sn.gv[0]),
+                             w[1] + sn.subR0*(c3*sn.gu[1] + s3*sn.gv[1]),
+                             w[2] + sn.subR0*(c3*sn.gu[2] + s3*sn.gv[2]) ]);
+        if (k3===0) ctx.moveTo(pt3[0],pt3[1]); else ctx.lineTo(pt3[0],pt3[1]);
+      }
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+    ctx.restore();
+  }
+
+  function drawTimeGrid(){
+    if (state.layout !== "time") return;
+    var padX = Math.max(70, W*0.07);
+    var span = Math.max(1, t1-t0);
+    var DAY = 86400000;
+    function xOf(tt){
+      var u = clamp((tt - t0)/span, 0, 1);
+      var x = padX + u*(W-2*padX);
+      return (x - W/2)*state.scale + W/2 + state.panX;
+    }
+    ctx.save();
+    ctx.textAlign = "center";
+
+    // —— 横轴基线：把「时间轴」画实，不只靠竖线暗示
+    ctx.strokeStyle = "rgba(150,175,225,0.16)";
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(xOf(t0), H-130); ctx.lineTo(xOf(t1), H-130);
+    ctx.stroke();
+
+    // —— 每 7 天一条细刻线；放大到一定倍数才补 M/D 小字，避免拥挤
+    ctx.font = "10px 'Microsoft YaHei',sans-serif";
+    var step = 7*DAY;
+    var firstTick = Math.ceil(t0/step)*step;
+    for (var tt = firstTick; tt <= t1; tt += step){
+      var dt = new Date(tt);
+      var xw = xOf(tt);
+      if (xw < -20 || xw > W+20) continue;
+      ctx.strokeStyle = "rgba(120,155,235,0.075)";
+      ctx.beginPath(); ctx.moveTo(xw, 62); ctx.lineTo(xw, H-130); ctx.stroke();
+      if (state.scale >= 1.15){
+        ctx.fillStyle = "rgba(150,175,225,0.30)";
+        ctx.fillText((dt.getMonth()+1)+"/"+dt.getDate(), xw, H-114);
+      }
+    }
+
+    // —— 每月一条主线 + 月份标签
+    ctx.font = "11px 'Microsoft YaHei',sans-serif";
+    var seen = {};
+    nodes.forEach(function(n){
+      if (n.kind === "gone") return;
+      var d = new Date(n.s.created||n.s.last);
+      var key = d.getFullYear()+"-"+(d.getMonth()+1);
+      if (seen[key]) return;
+      seen[key] = 1;
+      var m0 = new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+      var x = xOf(m0);
+      if (x < -40 || x > W+40) return;
+      ctx.strokeStyle = "rgba(120,155,235,0.10)";
+      ctx.beginPath(); ctx.moveTo(x, 56); ctx.lineTo(x, H-118); ctx.stroke();
+      ctx.strokeStyle = "rgba(4,8,18,0.88)";
+      ctx.lineWidth = 3;
+      ctx.strokeText((d.getMonth()+1)+"月", x, H-98);
+      ctx.fillStyle = "rgba(150,175,225,0.55)";
+      ctx.fillText((d.getMonth()+1)+"月", x, H-98);
+      if (d.getMonth() === 0) { ctx.fillStyle="rgba(150,175,225,0.32)"; ctx.fillText(String(d.getFullYear()), x, H-82); }
+    });
+
+    // —— 「最新」标记：暖金虚线，一眼找到时间轴右端
+    var xl = xOf(t1);
+    if (xl > -40 && xl < W+40){
+      ctx.strokeStyle = "rgba(233,196,128,0.34)";
+      ctx.setLineDash([4,5]);
+      ctx.lineWidth = 1;
+      ctx.beginPath(); ctx.moveTo(xl, 56); ctx.lineTo(xl, H-118); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.font = "11px 'Microsoft YaHei',sans-serif";
+      ctx.strokeStyle = "rgba(4,8,18,0.88)";
+      ctx.lineWidth = 3;
+      ctx.strokeText("最新", xl, H-98);
+      ctx.fillStyle = "rgba(233,196,128,0.80)";
+      ctx.fillText("最新", xl, H-98);
+    }
+    ctx.restore();
+  }
+
+  function drawLinks(){
+    var focus = state.selected || state.hover;
+    if (!focus || !neighborMap[focus.id]) return;
+    var ball = state.layout === "ball";
+    var p0 = ball ? [focus.px, focus.py] : toScreen(focus.bx,focus.by);
+    ctx.save();
+    neighborMap[focus.id].forEach(function(id){
+      var n = nodeById[id];
+      if (!n || !n.visible) return;
+      var p1 = ball ? [n.px, n.py] : toScreen(n.bx,n.by);
+      var g = ctx.createLinearGradient(p0[0],p0[1],p1[0],p1[1]);
+      g.addColorStop(0, rgba(focus.hue, 0.5));
+      g.addColorStop(1, rgba(n.hue, 0.16));
+      ctx.strokeStyle = g;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([3,4]);
+      ctx.beginPath(); ctx.moveTo(p0[0],p0[1]); ctx.lineTo(p1[0],p1[1]); ctx.stroke();
+    });
+    ctx.restore();
+  }
+
+  function drawNodes(){
+    var ball = state.layout === "ball";
+    var list = [];
+    for (var i=0;i<nodes.length;i++){
+      var n0 = nodes[i];
+      if (n0.kind === "sub" && !state.showSubs) continue;
+      if (n0.kind === "gone" && !state.showGone) continue;
+      if (n0.kind !== "gone" && (n0.s.created||0) > state.cutoff) continue;
+      if (isIntroing(n0)) continue;   // 飞入中的星由 drawIntro 画
+      list.push(n0);
+    }
+    if (ball) list.sort(function(a,b){ return b.pz - a.pz; }); // 后面的先画，前面的压上来
+    var Rb = ball ? orbitOuter() : 1;
+
+    for (var ii=0;ii<list.length;ii++){
+      var n = list[ii];
+      var p = ball ? [n.px, n.py] : toScreen(n.bx, n.by);
+      if (p[0] < -120 || p[0] > W+120 || p[1] < -120 || p[1] > H+120) continue;
+
+      var pulse = 0.86 + 0.14*Math.sin(tsec*1.5 + n.phase);
+      var timeLum = ball ? (0.18 + 0.82 * (n.rec || 0)) : 1;   // 越新越亮
+      var near = ball ? clamp(1 - ((n.pz + Rb) / (2*Rb)) * 0.80, 0.24, 1) : 1; // 越远越暗（深度雾）
+      var a = n.alpha * pulse * near * timeLum;
+      if (state.q && !n.match) a *= 0.14;
+      if (state.filter === "fav" && !n.fav) a *= 0.10;
+      if (n.kind === "gone") a *= 0.34;
+
+      var persp = ball ? n.ps : 1;
+      // 尺寸：新星大、旧星小 —— 天体要小，辉光才显柔（参考站的行星只占画面 1% 左右）
+      var size = n.r * 1.15 * (n.kind==="sub" ? 0.86 : 1) * persp *
+                 (ball ? (0.56 + 0.74*(n.rec || 0)) : 1);
+
+      // 运动拖尾：看得出这颗星在绕中心转
+      if (ball && n.kind === "main" && n.r > 13 && state.spin) {
+        ctx.beginPath();
+        var STEPS = 9;
+        for (var st=0; st<=STEPS; st++){
+          var aa = n.orbA - 0.42*(1 - st/STEPS);
+          var pp2 = orbitPointOf(n, aa);
+          if (st===0) ctx.moveTo(pp2[0],pp2[1]); else ctx.lineTo(pp2[0],pp2[1]);
+        }
+        ctx.strokeStyle = rgba(n.hue, clamp(0.20*a, 0, 0.45));
+        ctx.lineWidth = 1.1;
+        ctx.stroke();
+      }
+
+      if (ball && n.kind === "main") {
+        // ① 氛围光：收得比原来紧，避免多颗星的光晕糊成一片
+        var glowSize = size * (1.35 + 0.85*(n.rec || 0));
+        ctx.globalAlpha = clamp(a*0.24, 0, 1);
+        ctx.drawImage(spriteOf(n.hue), p[0]-glowSize/2, p[1]-glowSize/2, glowSize, glowSize);
+        // ② 天体本体：左上受光、边缘压暗的球
+        var dB = size * 1.06;
+        ctx.globalAlpha = clamp(a, 0, 1);
+        ctx.drawImage(ballOf(n.hue), p[0]-dB/2, p[1]-dB/2, dB, dB);
+        // ③ 高光核
+        ctx.globalAlpha = clamp(a*0.92, 0, 1);
+        ctx.fillStyle = "rgba(255,255,255,0.94)";
+        ctx.beginPath();
+        ctx.arc(p[0]-size*0.11, p[1]-size*0.13, Math.max(0.8, size*0.068), 0, TAU);
+        ctx.fill();
+        // ④ 散景光斑（只有够大的星才铺）
+        if (n.r > 19) drawBokeh(n, p[0], p[1], size, a);
+        // ⑤ 轮次多的星加一点十字星芒
+        if (n.r > 21) {
+          var L = n.r * 1.7 * persp;
+          ctx.globalAlpha = clamp(a*0.26,0,1);
+          ctx.strokeStyle = rgba(n.hue, 0.6);
+          ctx.lineWidth = 0.7;
+          ctx.beginPath();
+          ctx.moveTo(p[0]-L, p[1]); ctx.lineTo(p[0]+L, p[1]);
+          ctx.moveTo(p[0], p[1]-L); ctx.lineTo(p[0], p[1]+L);
+          ctx.stroke();
+        }
+      } else {
+        ctx.globalAlpha = clamp(a,0,1);
+        ctx.drawImage(spriteOf(n.hue), p[0]-size/2, p[1]-size/2, size, size);
+        if (n.kind === "main") {
+          ctx.globalAlpha = clamp(a*0.97,0,1);
+          ctx.fillStyle = "rgba(255,255,255,0.97)";
+          ctx.beginPath(); ctx.arc(p[0],p[1], Math.max(1.1, n.r*0.16*persp), 0, TAU); ctx.fill();
+        }
+      }
+      if (n.fav) {
+        ctx.globalAlpha = clamp(a,0,1);
+        ctx.strokeStyle = "rgba(255,213,79,0.75)";
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(p[0],p[1], n.r*1.55*persp, 0, TAU); ctx.stroke();
+      }
+      if (n === state.selected) {
+        ctx.globalAlpha = 1;
+        ctx.strokeStyle = "rgba(120,220,255,0.85)";
+        ctx.lineWidth = 1.4;
+        ctx.beginPath(); ctx.arc(p[0],p[1], n.r*1.9*persp + Math.sin(tsec*3)*2, 0, TAU); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+  /* ---------------- 标签层：天体编号 + 标题 + 引导线 ---------------- */
+  // 只给最重要的十几颗常显标签（参考站也是稀疏排布），其余靠悬停
+  function labelCandidates(){
+    var arr = [];
+    for (var i=0;i<nodes.length;i++){
+      var n = nodes[i];
+      if (n.kind !== "main") continue;
+      if (isIntroing(n)) continue;
+      if ((n.s.created||0) > state.cutoff) continue;
+      arr.push(n);
+    }
+    arr.sort(function(a,b){
+      return (b.r*0.55 + (b.rec||0)*46) - (a.r*0.55 + (a.rec||0)*46);
+    });
+    return arr.slice(0, 9);
+  }
+
+  function idTag(n){
+    var s = String(n.id || "").replace(/^session-/, "").replace(/[^0-9a-zA-Z]/g, "");
+    return s ? s.slice(0,8).toUpperCase() : "MANUAL";
+  }
+
+  function drawLabels(){
+    var ball=state.layout==="ball",list=nodes.filter(function(n){return n.visible&&n.kind==="main"&&!isIntroing(n)&&(!state.q||n.match)&&(state.filter!=="fav"||n.fav);});
+    list.sort(function(a,b){return ((b===state.selected?1000:0)+(b===state.hover?500:0)+b.r+b.rec*25)-((a===state.selected?1000:0)+(a===state.hover?500:0)+a.r+a.rec*25);});
+    if(ball&&state.focusStar)list=list.filter(function(n){return n.gi===state.focusStar.gi;});
+    var boxes=[],header=document.querySelector(".topbar").getBoundingClientRect(),
+      quote=document.getElementById("quote").getBoundingClientRect(),actions=document.querySelector(".actions").getBoundingClientRect(),
+      rp=document.getElementById("replay").getBoundingClientRect();
+    [header,actions,rp].forEach(function(r){boxes.push([r.left-8,r.top-8,r.width+16,r.height+16]);});
+    if(getComputedStyle(qCard).display!=="none")boxes.push([quote.left-8,quote.top-8,quote.width+16,quote.height+16]);
+    if(panel.classList.contains("open"))boxes.push([W-Math.min(390,W*.92)-6,0,Math.min(390,W*.92)+6,H]);
+    function clashes(b){return boxes.some(function(q){return b[0]<q[0]+q[2]&&b[0]+b[2]>q[0]&&b[1]<q[1]+q[3]&&b[1]+b[3]>q[1];});}
+    ctx.save();var shown=0;
+    for(var i=0;i<list.length&&shown<6;i++){
+      var n=list[i],p=ball?[n.px,n.py]:toScreen(n.bx,n.by),r=ball?(n.screenRadius||6):n.r*.6;
+      if(p[0]<30||p[0]>W-30||p[1]<120||p[1]>H-100)continue;
+      var text=String(n.s.title||"未命名对话");if(text.length>15)text=text.slice(0,15)+"…";
+      ctx.font="11px 'Microsoft YaHei',sans-serif";
+      var tw=Math.max(78,ctx.measureText(text).width),offsets=[[r+18,-31],[-tw-r-18,-31],[r+18,24],[-tw-r-18,24]],box=null;
+      for(var j=0;j<offsets.length;j++){
+        var q=[p[0]+offsets[j][0],p[1]+offsets[j][1],tw+8,30];
+        if(q[0]<22||q[0]+q[2]>W-22||q[1]<110||q[1]+30>H-90||clashes(q))continue;
+        var bodyClash=nodes.some(function(o){if(o===n||!o.visible)return false;var op=ball?[o.px,o.py]:toScreen(o.bx,o.by),rr=ball?(o.screenRadius||4):o.r*.5;return op[0]+rr>q[0]&&op[0]-rr<q[0]+q[2]&&op[1]+rr>q[1]&&op[1]-rr<q[1]+q[3];});
+        if(!bodyClash){box=q;break;}
+      }
+      if(!box)continue; boxes.push(box);shown++;
+      var alpha=n===state.selected?1:0.70;ctx.globalAlpha=alpha;
+      ctx.strokeStyle="rgba(193,177,144,.45)";ctx.lineWidth=.7;ctx.beginPath();ctx.moveTo(p[0],p[1]);ctx.lineTo(box[0]+(box[0]>p[0]?0:tw),box[1]+11);ctx.stroke();
+      ctx.font="9px Consolas,monospace";ctx.fillStyle="#d5bb8c";ctx.fillText(idTag(n),box[0]+3,box[1]+10);
+      ctx.font="11px 'Microsoft YaHei',sans-serif";ctx.fillStyle="#d0c9bb";ctx.fillText(text,box[0]+3,box[1]+25);
+    }
+    ctx.restore();
+  }
+
+  /* ---------------- 左上引文卡：数据之外的那句话 ---------------- */
+  var qCard = document.getElementById("quote");
+  var qCardLine = document.getElementById("qLine");
+  var qCardMeta = document.getElementById("qMeta");
+  var qDefault = null;   // 默认展示最新一颗主星的原话
+
+  function newestMain(){
+    var best = null;
+    for (var i=0;i<nodes.length;i++){
+      var n = nodes[i];
+      if (n.kind !== "main" || !n.s) continue;
+      if (!best || (n.s.last||0) > (best.s.last||0)) best = n;
+    }
+    return best;
+  }
+
+  function updateQuote(n){
+    var t = n && n.kind === "main" ? n : qDefault;
+    if (!qCard) return;
+    if (!t || !t.s) { qCard.classList.remove("show"); return; }
+    var txt = String(t.s.firstUser || t.s.firstAsst || "").replace(/\s+/g, " ").trim();
+    if (!txt) { qCard.classList.remove("show"); return; }
+    if (txt.length > 58) txt = txt.slice(0, 58) + "…";
+    qCardLine.textContent = "「" + txt.replace(/[「」]/g, "") + "」";
+    var when = t.s.created || t.s.last;
+    qCardMeta.textContent = "— " + (t.s.title || "未命名对话") + " · " + fmtDate(when) + " · " + (t.s.turns||1) + " 轮";
+    qCard.classList.add("show");
+  }
+
+  // 新星入场：从画面深处的宇宙里朝观察者飞来（一路变大变亮、越飞越快），
+  // 到最后"跑前来"贴着镜头掠过，再收一下落进自己的轨道 —— 像开了一个新对话，星空里多了一颗。
+  var INTRO_T = (function(){
+    try {
+      var v = new URLSearchParams(location.search).get("introT");
+      return v == null ? null : clamp(parseFloat(v), 0, 1);
+    } catch(e){ return null; }
+  })();
+  function introQuad(a,b,c,t){ var u = 1-t; return u*u*a + 2*u*t*b + t*t*c; }
+  function drawIntro(ts){
+    if (!introStars.length) return;
+    for (var i=0;i<introStars.length;i++){
+      var it = introStars[i];
+      var raw = (ts - it.start) / it.dur;
+      if (raw <= 0) continue;
+      var t = INTRO_T !== null ? INTRO_T : clamp(raw, 0, 1);
+      var n = it.n;
+
+      // 纵深加速：远处几乎不动，越近冲得越快；最后 30% 收速落位
+      var e = t < 0.70
+        ? Math.pow(t/0.70, 1.9) * 0.90
+        : 0.90 + (1 - Math.pow(1 - clamp((t-0.70)/0.30, 0, 1), 2.2)) * 0.10;
+
+      var sx = it.x0, sy = it.y0;                   // 起点：画面外围的深空（离中心 170~430px）
+      var ex = n.px, ey = n.py;                     // 终点：自己的轨道位置
+      var cx2 = (sx+ex)/2 + (ey-sy)*0.16;
+      var cy2 = (sy+ey)/2 - (ex-sx)*0.16;
+      var x = introQuad(sx, cx2, ex, e);
+      var y = introQuad(sy, cy2, ey, e);
+
+      var alpha = clamp(t/0.10, 0, 1);
+      var scale = 0.030 + 0.970 * Math.pow(e, 1.55);  // 从针尖大一路冲到眼前
+      var size = n.r * 1.45 * scale * (1.0 + 1.30*(1-e));  // 冲到眼前时比落位更大，落位后正好收到正常大小
+
+      // 迎面而来的星流尾迹：越接近越亮、越拖越长
+      var trail = 9;
+      for (var k=1;k<=trail;k++){
+        var ee = Math.max(0, e - k*0.042);
+        var tx = introQuad(sx, cx2, ex, ee);
+        var ty = introQuad(sy, cy2, ey, ee);
+        var ss = n.r * 1.45 * (0.030 + 0.970*Math.pow(ee,1.85)) * (1.0 + 1.30*(1-ee)) * (1 - k/(trail+1.5));
+        ctx.globalAlpha = 0.34 * alpha * (1 - k/(trail+1)) * (0.35 + 0.65*e);
+        ctx.drawImage(spriteOf(n.hue), tx-ss/2, ty-ss/2, ss, ss);
+      }
+
+      // 迎面辉光：越飞近，周围那团光越大越亮
+      if (e > 0.10) {
+        var glR = size * (0.9 + 0.8*e);
+        var gl = ctx.createRadialGradient(x, y, 0, x, y, glR);
+        gl.addColorStop(0, rgba(n.hue, 0.46*alpha));
+        gl.addColorStop(0.45, rgba(n.hue, 0.16*alpha));
+        gl.addColorStop(1, rgba(n.hue, 0));
+        ctx.globalAlpha = 1;
+        ctx.fillStyle = gl;
+        ctx.beginPath(); ctx.arc(x, y, glR, 0, TAU); ctx.fill();
+      }
+
+      // 速度线：从身后的深空一直拉到现在的位置
+      if (e > 0.06) {
+        var tx0 = introQuad(sx, cx2, ex, Math.max(0, e - 0.14));
+        var ty0 = introQuad(sy, cy2, ey, Math.max(0, e - 0.14));
+        ctx.globalAlpha = 0.30 * alpha * (0.25 + 0.75*e);
+        ctx.strokeStyle = rgba(n.hue, 0.75);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.moveTo(tx0, ty0); ctx.lineTo(x, y); ctx.stroke();
+      }
+
+      // 星本体：飞近时中心先亮起来
+      ctx.globalAlpha = alpha;
+      ctx.drawImage(spriteOf(n.hue), x-size/2, y-size/2, size, size);
+      ctx.globalAlpha = alpha*0.96;
+      ctx.fillStyle = "rgba(255,255,255,0.96)";
+      ctx.beginPath(); ctx.arc(x, y, Math.max(1.2, n.r*0.22*scale*1.4), 0, TAU); ctx.fill();
+
+      // 落位冲击波
+      if (t > 0.84) {
+        var fl = (t - 0.84)/0.16;
+        ctx.globalAlpha = (1-fl)*0.60;
+        ctx.strokeStyle = rgba(n.hue, 0.9);
+        ctx.lineWidth = 1.5;
+        ctx.beginPath(); ctx.arc(ex, ey, n.r*1.4 + fl*n.r*3.6, 0, TAU); ctx.stroke();
+        ctx.globalAlpha = (1-fl)*0.22;
+        ctx.strokeStyle = "rgba(255,255,255,0.9)";
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(ex, ey, n.r*1.1 + fl*n.r*2.2, 0, TAU); ctx.stroke();
+      }
+      ctx.globalAlpha = 1;
+    }
+  }
+
+
+  function updateVisibility(){
+    nodes.forEach(function(n){
+      n.visible = !(n.kind==="sub"&&!state.showSubs) && !(n.kind==="gone"&&!state.showGone) &&
+        !(n.kind!=="gone"&&(n.s.created||0)>state.cutoff);
+      n.renderAlpha = n.alpha * ((state.q&&!n.match)?0.13:1) * ((state.filter==="fav"&&!n.fav)?0.10:1);
+      if(state.layout==="ball"&&state.focusStar&&n.gi!==state.focusStar.gi)n.renderAlpha*=.24;
+    });
+  }
+  function drawMarkers(){
+    if(state.focusStar){
+      ctx.save();ctx.strokeStyle="rgba(220,192,138,.32)";ctx.lineWidth=.7;ctx.setLineDash([2,4]);
+      nodes.forEach(function(n){
+        if(n.kind!=="sub"||!n.visible||!n.pNode||n.gi!==state.focusStar.gi)return;
+        var pw=worldOf(n.pNode);ctx.beginPath();
+        for(var k=0;k<=48;k++){var a=k/48*TAU,u=n.gu,v=n.gv,q=project3([pw[0]+n.sR*(Math.cos(a)*u[0]+Math.sin(a)*v[0]),pw[1]+n.sR*(Math.cos(a)*u[1]+Math.sin(a)*v[1]),pw[2]+n.sR*(Math.cos(a)*u[2]+Math.sin(a)*v[2])]);if(k)ctx.lineTo(q[0],q[1]);else ctx.moveTo(q[0],q[1]);}ctx.stroke();
+      });ctx.restore();
+    }
+    nodes.forEach(function(n){
+      if(!n.visible||isIntroing(n)||(!n.fav&&n!==state.selected&&n!==state.hover)) return;
+      var r=(n.screenRadius||5)+5;
+      ctx.save();ctx.strokeStyle=n===state.selected?"#edd4a0":"rgba(227,191,111,.68)";
+      ctx.globalAlpha=n.renderAlpha;ctx.lineWidth=n===state.selected?1.2:.8;
+      ctx.beginPath();ctx.arc(n.px,n.py,r,0,TAU);ctx.stroke();ctx.restore();
+    });
+  }
+  function syncFocusNote(){
+    var f=state.focusStar, text="每颗行星是一段对话 · 小卫星是派生会话";
+    if(f) text="正在查看："+(f.s.title||"未命名对话")+" · 点「总览」返回";
+    document.getElementById("focusNote").textContent=text;
+  }
+
+  function frame(ts){
+    var dt = lastTs ? Math.min(0.05,(ts-lastTs)/1000) : 0.016;
+    lastTs = ts; tsec += dt;
+
+    // 清掉已经落位的新星（?introT= 固定演示时不清理）
+    if (introStars.length && INTRO_T === null) {
+      for (var ii3=introStars.length-1; ii3>=0; ii3--){
+        if (ts - introStars[ii3].start > introStars[ii3].dur) introStars.splice(ii3,1);
+      }
+    }
+
+    // 位置缓动
+    for (var i=0;i<nodes.length;i++){
+      var n = nodes[i];
+      n.bx = lerp(n.bx, n.tbx, 0.085);
+      n.by = lerp(n.by, n.tby, 0.085);
+    }
+
+    // 镜头：聚焦时每帧跟随目标星（以它为参考系），否则缓动回全景
+    if (state.layout === "ball") {
+      if (state.focusStar && state.focusStar.kind !== "gone") {
+        var fw = worldOf(state.focusStar);
+        state.tCamX = fw[0]; state.tCamY = fw[1]; state.tCamZ = fw[2];
+      }
+      var kc = clamp(1 - Math.pow(1 - 0.16, dt * 60), 0, 1);
+      state.camX = lerp(state.camX, state.tCamX, kc);
+      state.camY = lerp(state.camY, state.tCamY, kc);
+      state.camZ = lerp(state.camZ, state.tCamZ, kc);
+      state.zoom = lerp(state.zoom, state.tZoom, kc);
+      if (Math.abs(state.camX - state.tCamX) < 0.4) state.camX = state.tCamX;
+      if (Math.abs(state.camZ - state.tCamZ) < 0.4) state.camZ = state.tCamZ;
+      if (Math.abs(state.zoom - state.tZoom) < 0.002) state.zoom = state.tZoom;
+    }
+
+    // 轨道：每帧推进公转角 + 投影
+    if (state.layout === "ball") {
+      var spd = state.spin ? 1 : 0;
+      for (var bi=0;bi<nodes.length;bi++){
+        var bn = nodes[bi];
+        if (bn.kind === "sub") bn.sA += bn.sW * dt * spd * 0.22;   // 卫星绕父星转：一圈约 30 秒，能看清也能点中
+        else if (bn.kind !== "gone") bn.orbA += bn.orbW * dt * spd;
+        projectOrbit(bn);
+      }
+    }
+
+    // 时间回放推进
+    if (state.playing){
+      var span = t1 - t0;
+      state.cutoff += dt * span / 14; // 约 14 秒放完
+      if (state.cutoff >= t1){ state.cutoff = t1; state.playing = false; syncPlayBtn(); }
+      syncSlider();
+    }
+
+    // 巡览：每隔几秒镜头自己飞向下一颗重点星
+    if (tour.on && state.layout === "ball" && tsec - tour.last > 6.0) {
+      tour.last = tsec;
+      tourNext();
+    }
+
+    updateVisibility();
+    glCanvas.style.display = webgl && state.layout === "ball" ? "block" : "none";
+    if (webgl && state.layout === "ball") {
+      ctx.clearRect(0,0,W,H);
+      webgl.render({W:W,H:H,DPR:DPR,time:state.spin ? tsec : 0,state:state,nodes:nodes,groups:orbitGroups,worldOf:worldOf,isIntroing:isIntroing});
+      drawLinks(); drawMarkers(); drawLabels(); drawIntro(ts);
+    } else {
+      drawBg(); drawOrbitRings(); drawCore(); drawTimeGrid(); drawLinks(); drawNodes(); drawLabels(); drawIntro(ts);
+    }
+    if(lastMeasure) { frameSamples.push(ts-lastMeasure); if(frameSamples.length>180)frameSamples.shift(); }
+    lastMeasure=ts;
+    if(frameSamples.length) measuredFPS=1000/(frameSamples.reduce(function(a,b){return a+b;},0)/frameSamples.length);
+    if(Math.floor(tsec*2)!==frame._tick){ frame._tick=Math.floor(tsec*2); syncFocusNote(); }
+    requestAnimationFrame(frame);
+  }
+
+  var introStars = [];   // 新对话的星：从深处飞向自己的轨道
+  function isIntroing(n){
+    for (var i=0;i<introStars.length;i++) if (introStars[i].n === n) return true;
+    return false;
+  }
+
+  /* ---------------- 巡览：镜头一颗一颗自己飞过去 ---------------- */
+  var tour = { on:false, idx:0, last:0, pool:[] };
+  function tourPool(){
+    if (tour.pool.length) return tour.pool;
+    var arr = [];
+    for (var i=0;i<nodes.length;i++){
+      var n = nodes[i];
+      if (n.kind !== "main" || !n.s) continue;
+      arr.push(n);
+    }
+    arr.sort(function(a,b){
+      return (b.r*0.6 + (b.rec||0)*60) - (a.r*0.6 + (a.rec||0)*60);
+    });
+    tour.pool = arr.slice(0, 22);
+    return tour.pool;
+  }
+  function tourNext(){
+    var pool = tourPool();
+    if (!pool.length) return;
+    var n = pool[tour.idx % pool.length];
+    tour.idx++;
+    if (state.layout !== "ball") setLayout("ball");
+    if (panel.classList.contains("open")) panel.classList.remove("open"); document.body.classList.remove("has-panel");
+    state.selected = n;
+    focusOn(n, 2.0);
+    updateQuote(n);
+  }
+  function syncTourBtn(){
+    var b = document.getElementById("tourBtn");
+    if (!b) return;
+    b.classList.toggle("on", tour.on);
+    b.textContent = tour.on ? "■ 巡览中" : "✦ 巡览";
+  }
+  function startTour(){
+    tour.on = true; tour.idx = 0; tour.last = tsec; tour.pool = [];
+    if (state.layout !== "ball") setLayout("ball");
+    tourNext();
+    syncTourBtn();
+    toast("巡览开始 · 每 6 秒飞向下一颗 · 点任意处停止");
+  }
+  function stopTour(){
+    if (!tour.on) return;
+    tour.on = false;
+    syncTourBtn();
+    toast("巡览已停止");
+  }
+
+  /* ---------------- 面板 ---------------- */
+  var panel = document.getElementById("panel");
+  var pTitle = document.getElementById("pTitle");
+  var pBody = document.getElementById("pBody");
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+
+  function openStar(n){
+    stopTour();
+    state.selected = n;
+    updateQuote(n);
+    // 点星 → 镜头飞过去（球体在屏幕上被推近、周围星散开）
+    if (state.layout === "ball" && n.kind !== "gone") focusOn(n, 2.15);
+    var s = n.s;
+    panel.classList.add("open"); document.body.classList.add("has-panel");
+    ensureVisible(n);
+    pTitle.textContent = s.title || "未命名对话";
+
+    var pf = profile.stars[s.id] || {};
+    var chips = [];
+    chips.push('<span class="chip proj">' + esc(s.project || "未知") + '</span>');
+    if (s.sub) chips.push('<span class="chip sub">子代理 · 第 ' + (s.depth||1) + ' 层</span>');
+    if (pf.fav) chips.push('<span class="chip fav">★ 收藏</span>');
+    if (n.kind === "gone") chips.push('<span class="chip">已归档</span>');
+
+    var html = '<div class="chips">' + chips.join("") + '</div>';
+    html += '<dl class="kv">' +
+      '<dt>开始</dt><dd>' + esc(fmtFull(s.created)) + '（' + esc(ago(s.created)) + '）</dd>' +
+      '<dt>最后活动</dt><dd>' + esc(fmtFull(s.last)) + '</dd>' +
+      '<dt>用户轮次</dt><dd>' + (s.u||0) + ' 轮</dd>' +
+      '<dt>助手消息</dt><dd>' + (s.a||0) + ' 条</dd>' +
+      '</dl>';
+
+    html += '<div class="sect">第一句话</div>';
+    html += '<div class="quote">' + (s.firstUser ? esc(s.firstUser) : '<span style="color:#5d6a86">（没有文字，可能是图片或空会话）</span>') + '</div>';
+    if (s.firstAsst) {
+      html += '<div class="sect">它当时的第一句回答</div>';
+      html += '<div class="quote asst">' + esc(s.firstAsst) + '</div>';
+    }
+
+    var tags = pf.tags || [];
+    html += '<div class="sect">我的标签</div>';
+    html += '<div class="tagrow" id="tagRow">' + tags.map(function(t){
+      return '<span class="tag">' + esc(t) + '<i data-tag="' + esc(t) + '">×</i></span>'; }).join("") + '</div>';
+    html += '<input class="inline-input" id="tagInput" placeholder="输入标签后回车（如：重要、工作、失败）" maxlength="20">';
+
+    html += '<div class="sect">会话 ID（可在交接卡 / 会话恢复中定位）</div>';
+    html += '<div class="mono" id="sid">' + esc(s.id) + '</div>';
+
+    html += '<div class="btnrow">' +
+      '<button class="btn primary" id="favBtn">' + (pf.fav ? "★ 取消收藏" : "☆ 收藏这颗星") + '</button>' +
+      '<button class="btn" id="copyBtn">复制会话 ID</button>' +
+      '</div>';
+
+    if (n.kind !== "gone") {
+      var nb = neighborMap[s.id] || [];
+      if (nb.length) {
+        html += '<div class="sect">可能相关的星（星座连线）</div>';
+        html += '<div class="tagrow">' + nb.map(function(id){
+          var t = nodeById[id]; return t ? '<span class="tag" data-jump="' + esc(id) + '" style="cursor:pointer">' + esc(t.s.title) + '</span>' : '';
+        }).join("") + '</div>';
+      }
+    }
+
+    pBody.innerHTML = html;
+
+    document.getElementById("favBtn").onclick = function(){
+      var p = pOf(s.id); p.fav = !p.fav; n.fav = p.fav; saveProfile(); openStar(n); toast(p.fav ? "已收藏" : "已取消收藏");
+    };
+    document.getElementById("copyBtn").onclick = function(){
+      copyText(s.id).then(function(){ toast("会话 ID 已复制"); });
+    };
+    var tagInput = document.getElementById("tagInput");
+    tagInput.onkeydown = function(e){
+      if (e.key === "Enter" && this.value.trim()) {
+        var p = pOf(s.id); p.tags = p.tags || [];
+        var v = this.value.trim();
+        if (p.tags.indexOf(v) < 0) p.tags.push(v);
+        saveProfile(); openStar(n);
+      }
+    };
+    pBody.querySelectorAll("[data-tag]").forEach(function(el){
+      el.onclick = function(){
+        var p = pOf(s.id), v = el.getAttribute("data-tag");
+        p.tags = (p.tags||[]).filter(function(x){ return x !== v; });
+        saveProfile(); openStar(n);
+      };
+    });
+    pBody.querySelectorAll("[data-jump]").forEach(function(el){
+      el.onclick = function(){
+        var t = nodeById[el.getAttribute("data-jump")];
+        if (t) openStar(t);
+      };
+    });
+  }
+
+  function closePanel(){ panel.classList.remove("open"); document.body.classList.remove("has-panel"); state.selected = null; updateQuote(null); focusOn(null); }
+  document.getElementById("pClose").onclick = closePanel;
+
+  // 打开的星如果被右侧面板挡住，就把星图平移一下，让它露出来
+  function ensureVisible(n){
+    if (state.layout !== "time") return;
+    var p = toScreen(n.bx, n.by);
+    var panelW = panel.classList.contains("open") ? Math.min(420, W*0.92) : 0;
+    var maxX = W - panelW - 50;
+    if (p[0] > maxX) state.panX -= (p[0] - maxX);
+    if (p[0] < 55) state.panX += (55 - p[0]);
+  }
+
+  function copyText(text){
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      return navigator.clipboard.writeText(text).catch(function(){ return fallbackCopy(text); });
+    }
+    return Promise.resolve(fallbackCopy(text));
+  }
+  function fallbackCopy(text){
+    var ta = document.createElement("textarea");
+    ta.value = text; ta.style.position="fixed"; ta.style.opacity="0";
+    document.body.appendChild(ta); ta.select();
+    try { document.execCommand("copy"); } catch(e){}
+    document.body.removeChild(ta);
+  }
+
+  /* ---------------- 搜索 ---------------- */
+  var qEl = document.getElementById("q");
+  var hitsEl = document.getElementById("hits");
+  function applySearch(){
+    var q = state.q.trim().toLowerCase();
+    var n = 0;
+    nodes.forEach(function(nd){
+      if (!q) { nd.match = true; return; }
+      var s = nd.s;
+      var hay = ((s.title||"") + " " + (s.firstUser||"") + " " + (s.firstAsst||"") + " " + (s.project||"")).toLowerCase();
+      nd.match = hay.indexOf(q) >= 0;
+      if (nd.match) n++;
+    });
+    if (q) { hitsEl.style.display = "block"; hitsEl.textContent = n + " 颗"; }
+    else hitsEl.style.display = "none";
+  }
+  qEl.addEventListener("input", function(){ state.q = this.value; applySearch(); });
+  qEl.addEventListener("keydown", function(e){
+    if (e.key === "Enter") {
+      var hit = nodes.filter(function(n){ return n.match && n.kind==="main" && (n.s.created||0) <= state.cutoff; })[0];
+      if (hit) {
+        if (state.layout === "time") {
+          var p = toScreen(hit.tbx, hit.tby);
+          state.panX += (W/2 - p[0]);
+        }
+        openStar(hit);
+      }
+    }
+    if (e.key === "Escape") { this.value = ""; state.q = ""; applySearch(); this.blur(); }
+  });
+  addEventListener("keydown", function(e){
+    if (e.key === "/" && document.activeElement !== qEl) { e.preventDefault(); qEl.focus(); }
+    if (e.key === "Escape") { if (panel.classList.contains("open")) closePanel(); }
+  });
+
+  /* ---------------- 顶部按钮 ---------------- */
+  function setLayout(layout){
+    state.layout = layout;
+    if(layout !== "ball" && !bgCanvas) buildBackground();
+    document.querySelectorAll("#layoutSeg button").forEach(function(b){
+      b.classList.toggle("on", b.getAttribute("data-layout") === layout);
+    });
+    state.scale = 1; state.panX = 0;
+    state.zoom = 1; state.tZoom = 1;
+    state.camX = 0; state.camY=0; state.camZ = 0; state.tCamX = 0; state.tCamY=0; state.tCamZ = 0;
+    state.focusStar = null;
+    state.rotX = -1.02; state.rotY = 0.35;
+    relayout(true);
+  }
+  document.getElementById("layoutSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    stopTour();
+    setLayout(b.getAttribute("data-layout"));
+  });
+  document.getElementById("filterSeg").addEventListener("click", function(e){
+    var b = e.target.closest("button"); if (!b) return;
+    this.querySelectorAll("button").forEach(function(x){ x.classList.toggle("on", x === b); });
+    state.filter = b.getAttribute("data-filter");
+  });
+
+  document.getElementById("tourBtn").onclick = function(){
+    if (tour.on) stopTour(); else startTour();
+  };
+
+  document.getElementById("addStar").onclick = function(){
+    var title = prompt("给这颗手动星起个名字（比如：某次线下谈话）");
+    if (!title) return;
+    var content = prompt("内容 / 备注（可留空）") || "";
+    var id = "custom-" + Date.now();
+    profile.custom.push({ id:id, title:title, content:content, created:Date.now(), project:"手动" });
+    saveProfile();
+    var now = Math.min(Date.now(), t1);
+    var s = { id:id, title:title, project:"手动", created:now, last:now, turns:1,
+      u:0, a:0, firstUser:content, firstAsst:"", sub:0, manual:true };
+    var n = makeNode(s, "main");
+    projColor["手动"] = "#7ee787";
+    n.hue = "#7ee787";
+    n.r = 11;
+    relayout(false);
+    openStar(n);
+    toast("已加一颗手动星（存在浏览器本地）");
+  };
+
+  /* ---------------- 时间回放 ---------------- */
+  var slider = document.getElementById("timeSlider");
+  var whenLabel = document.getElementById("whenLabel");
+  var playBtn = document.getElementById("playBtn");
+
+  function syncSlider(){
+    var t01 = (state.cutoff - t0)/Math.max(1,t1-t0);
+    slider.value = Math.round(clamp(t01,0,1)*1000);
+    whenLabel.textContent = fmtDate(state.cutoff);
+  }
+  function syncPlayBtn(){ playBtn.textContent = state.playing ? "❚❚" : "▶"; }
+  slider.addEventListener("input", function(){
+    state.playing = false; syncPlayBtn();
+    state.cutoff = t0 + (t1-t0)*(this.value/1000);
+    whenLabel.textContent = fmtDate(state.cutoff);
+  });
+  playBtn.onclick = function(){
+    if (state.playing) { state.playing = false; }
+    else { if (state.cutoff >= t1-1000) state.cutoff = t0; state.playing = true; }
+    syncPlayBtn();
+  };
+  document.getElementById("showSubs").onchange = function(){ state.showSubs = this.checked; };
+  document.getElementById("showGone").onchange = function(){ state.showGone = this.checked; };
+
+  /* ---------------- 鼠标 ---------------- */
+  var tooltip = document.getElementById("tooltip");
+  var mx = 0, my = 0;
+
+  canvas.addEventListener("mousemove", function(e){
+    mx = e.clientX; my = e.clientY;
+    if (state.dragging) {
+      state.dragMoved += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
+      if (state.layout === "time") state.panX += (e.movementX || 0);
+      else if (state.layout === "ball") {
+        state.rotY += (e.movementX || 0) * 0.006;
+        state.rotX = clamp(state.rotX - (e.movementY || 0) * 0.006, -1.15, 1.15);
+      }
+      tooltip.classList.remove("show");
+      return;
+    }
+    var n = pick(mx,my);
+    state.hover = n;
+    if (n) {
+      canvas.classList.add("pointing");
+      var s = n.s;
+      tooltip.innerHTML = '<div class="t">' + esc(s.title||"未命名") + '</div>' +
+        '<div class="m">' + esc(s.project||"") + ' · ' + esc(fmtDate(s.created)) + ' · ' + (s.turns||1) + ' 轮</div>';
+      tooltip.style.left = Math.min(W-340, mx+16) + "px";
+      tooltip.style.top = Math.min(H-90, my+14) + "px";
+      tooltip.classList.add("show");
+    } else { canvas.classList.remove("pointing"); tooltip.classList.remove("show"); }
+  });
+  canvas.addEventListener("mousedown", function(e){
+    if (tour.on) stopTour();
+    state.dragging = true; state.dragMoved = 0; canvas.classList.add("dragging");
+  });
+  addEventListener("mouseup", function(e){
+    if (state.dragging) {
+      state.dragging = false; canvas.classList.remove("dragging");
+      if (state.dragMoved < 6) {
+        var n = pick(e.clientX, e.clientY);
+        if (n) openStar(n); else closePanel();
+      }
+    }
+  });
+  canvas.addEventListener("wheel", function(e){
+    if (state.layout === "ball") {
+      e.preventDefault();
+      if (tour.on) stopTour();
+      state.tZoom = clamp(state.tZoom * (e.deltaY < 0 ? 1.12 : 0.893), 0.6, 3.4);
+      return;
+    }
+    if (state.layout !== "time") return;
+    e.preventDefault();
+    var old = state.scale;
+    var next = clamp(old * (e.deltaY < 0 ? 1.12 : 0.893), 1, 14);
+    if (next === old) return;
+    var rect = canvas.getBoundingClientRect();
+    var px = e.clientX - rect.left;
+    // 以鼠标为锚点缩放
+    state.panX = (state.panX + (px - W/2)) * (next/old) - (px - W/2);
+    state.scale = next;
+  }, { passive:false });
+  canvas.addEventListener("dblclick", function(){
+    stopTour();
+    state.scale = 1; state.panX = 0;
+    state.rotX = -1.02; state.rotY = 0.35;
+    focusOn(null);          // 缓动回全景
+  });
+
+  /* ---------------- 启动 ---------------- */
+  var gen = new Date(DATA.generatedAt || Date.now());
+  var stale = (Date.now() - (DATA.generatedAt||0)) > 3600*1000;
+  document.getElementById("brandSub").textContent =
+    DATA.count + " 颗星 · " + DATA.mainCount + " 个对话 · 更新于 " + ago(DATA.generatedAt) + (stale ? "（重新运行导出命令更新）" : "");
+  document.getElementById("stats").innerHTML =
+    '<b>' + DATA.mainCount + '</b> 个主对话 · <b>' + DATA.subCount + '</b> 个子代理 · <b>' +
+    (DATA.archived||[]).length + '</b> 颗已归档<br>' +
+    '点星看详情 · 拖拽倾斜视角 · 滚轮缩放 · 双击复位';
+
+  // 手动星进图
+  profile.custom.forEach(function(c){
+    if (nodeById[c.id]) return;
+    var cw = Math.min(c.created || Date.now(), t1);
+    var n = makeNode({ id:c.id, title:c.title, project:c.project||"手动", created:cw,
+      last:cw, turns:1, u:0, a:0, firstUser:c.content||"", firstAsst:"", sub:0, manual:true }, "main");
+    projColor["手动"] = "#7ee787"; n.hue = "#7ee787"; n.r = 11;
+  });
+
+  resize();
+  nodes.forEach(function(n){ n.bx = n.tbx; n.by = n.tby; });
+
+  // 新星入场：和上次记录的星表比对，新出现的对话从宇宙深处朝你飞来，落进自己的轨道
+  // 想手动看一遍这个动画：打开 记忆星图.html?intro=1
+  (function initIntro(){
+    var SEEN_KEY = "starmap.seen.v1";
+    var seen = [];
+    try { seen = JSON.parse(localStorage.getItem(SEEN_KEY) || "[]"); } catch(e){ seen = []; }
+    if (!Array.isArray(seen)) seen = [];
+    var seenSet = {};
+    seen.forEach(function(id){ seenSet[id] = 1; });
+    var firstVisit = seen.length === 0;
+    var forceIntro = false;
+    try { forceIntro = new URLSearchParams(location.search).get("intro") === "1"; } catch(e){}
+
+    var pool = mainStars.slice().sort(function(a,b){ return (b.created||0) - (a.created||0); });
+    var newcomers = [];
+    for (var i=0;i<pool.length && newcomers.length<6;i++){
+      if (!seenSet[pool[i].id]) newcomers.push(pool[i]);
+    }
+    if (firstVisit) newcomers = pool.slice(0, 3);   // 第一次打开演示 3 颗
+    if (forceIntro) newcomers = pool.slice(0, 3);   // 手动重播演示
+    try {
+      var now0 = performance.now();
+      if (forceIntro) introStars.length = 0;
+      newcomers.forEach(function(s, idx){
+        var n = nodeById[s.id];
+        if (!n) return;
+        var ang = Math.random()*TAU;
+        var far = 420 + Math.random()*340;   // 起点离屏幕中心的距离：从很远的深空冲进来
+        introStars.push({
+          n: n,
+          start: now0 + (forceIntro ? 500 : 300) + idx*(forceIntro ? 420 : 300),
+          dur: 2600,
+          x0: W*0.5 + Math.cos(ang)*far,
+          y0: H*0.5 + Math.sin(ang)*far*0.82
+        });
+      });
+    } catch(e){}
+    try {
+      localStorage.setItem(SEEN_KEY, JSON.stringify(stars.map(function(s){ return s.id; })));
+    } catch(e){}
+  })();
+  try {
+    var qp = new URLSearchParams(location.search);
+    var wantLayout = qp.get("layout");
+    if (wantLayout && ["ball","time","project"].indexOf(wantLayout) >= 0) {
+      state.layout = wantLayout;
+      document.querySelectorAll("#layoutSeg button").forEach(function(b){
+        b.classList.toggle("on", b.getAttribute("data-layout") === wantLayout);
+      });
+      relayout(false);
+    }
+    var want = qp.get("star");
+    if (qp.get("still") === "1") state.spin = false;
+    if (qp.get("rot")) {
+      var rv = parseFloat(qp.get("rot"));
+      if (isFinite(rv)) state.rotY = rv;
+    }
+    if (qp.get("tilt")) {
+      var tv = parseFloat(qp.get("tilt"));
+      if (isFinite(tv)) state.rotX = clamp(tv, -1.15, 1.15);
+    }
+    if (want && nodeById[want]) { openStar(nodeById[want]); }
+    else if (qp.get("pick") === "1") {
+      var cand = mainStars.slice().sort(function(a,b){ return (b.turns||0)-(a.turns||0); })[0];
+      if (cand && nodeById[cand.id]) openStar(nodeById[cand.id]);
+    }
+  } catch(e){}
+  document.getElementById("homeBtn").onclick=function(){stopTour();closePanel();state.scale=1;state.panX=0;state.rotX=-1.10;state.rotY=.35;focusOn(null);};
+  document.getElementById("motionBtn").onclick=function(){state.spin=!state.spin;this.textContent=state.spin?"暂停":"继续";};
+  document.getElementById("exportBtn").onclick=function(){
+    var blob=new Blob([JSON.stringify({format:"memory-atlas-profile",version:1,exportedAt:new Date().toISOString(),profile:profile},null,2)],{type:"application/json"});
+    var u=URL.createObjectURL(blob),a=document.createElement("a");a.href=u;a.download="星图个人标记_"+fmtDate(Date.now())+".json";a.click();setTimeout(function(){URL.revokeObjectURL(u);},3000);
+  };
+  document.getElementById("importBtn").onclick=function(){document.getElementById("importFile").click();};
+  document.getElementById("importFile").onchange=async function(){
+    try{var file=this.files[0];if(!file)return;if(file.size>5000000)throw new Error("文件过大");
+      var d=JSON.parse(await file.text());if(d.format!=="memory-atlas-profile"||!d.profile||typeof d.profile.stars!=="object"||!Array.isArray(d.profile.custom))throw new Error("请选择本星图导出的标记文件");
+      profile.stars=Object.assign({},profile.stars,d.profile.stars);
+      d.profile.custom.forEach(function(c){if(!c||typeof c.id!=="string"||!c.id.startsWith("custom-")||typeof c.title!=="string")return;if(!profile.custom.some(function(x){return x.id===c.id;}))profile.custom.push(c);});
+      saveProfile();location.reload();
+    }catch(e){toast("导入失败："+e.message);}finally{this.value="";}
+  };
+  document.getElementById("motionBtn").textContent=state.spin?"暂停":"继续";
+  if(glError)toast("已切换兼容视图");
+  qDefault = newestMain();
+  if (!state.selected) updateQuote(null);
+  applySearch();
+  syncSlider();
+  requestAnimationFrame(frame);
+
+  window.__STARMAP__ = { renderer:webgl, glError:glError, getFPS:function(){return measuredFPS;}, pick:pick, project3:project3, worldOf:worldOf, setLayout:setLayout, profile:profile, saveProfile:saveProfile, data:DATA, state:state, nodes:nodes, neighborMap:neighborMap, openStar:openStar, relayout:relayout, introStars:introStars, INTRO_T:INTRO_T, drawIntro:drawIntro, setIntroT:function(v){ INTRO_T = v; } };
+  document.getElementById('networkView').addEventListener('click',function(){
+    if(state.selected)this.href='01-记忆宇宙.html?select='+encodeURIComponent('conv:'+(state.selected.id||state.selected));
+  });
+})();
+</script>
+</body>
+</html>

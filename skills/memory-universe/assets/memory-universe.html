@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+<title>记忆宇宙 · 关联网络{{TITLE_SUFFIX}}</title>
+<link rel="stylesheet" href="_lib/atlas.css">
+
+<style>
+  /* 演示标识：只在 demo 生成时注入，放进品牌区，不覆盖任何控件 */
+  .brand .demo-chip{display:inline-flex;align-items:center;margin-left:4px;
+    padding:3px 8px;border:1px solid rgba(226,120,96,.5);border-radius:4px;
+    background:rgba(160,45,32,.2);color:#ffb7a3;
+    font:600 10px/1.4 "Segoe UI","Microsoft YaHei",sans-serif;
+    letter-spacing:.06em;white-space:nowrap;align-self:center}
+</style>
+</head>
+<body>
+<canvas id="universe" aria-label="可旋转的三维记忆与对话关系网络"></canvas>
+<div id="labels" aria-hidden="true"></div><div id="vignette"></div>
+<header class="topbar">
+ <a class="brand" href="01-记忆宇宙.html"><span class="brand-icon">✺</span><span>记忆宇宙<small>MEMORY ATLAS / LOCAL ARCHIVE</small></span>{{DEMO_BANNER}}</a>
+ <nav><span class="active">关联网络</span><a href="02-记忆星图.html">真实行星 <span>↗</span></a></nav>
+ <div class="private"><i></i> 本地数据 <span>·</span> 只读浏览</div>
+</header>
+<aside class="sidebar">
+ <div class="section-caption">EXPLORE YOUR CONNECTIONS</div>
+ <h1>每段对话，<br>都有来处。</h1>
+ <p class="intro">沿着联系，重新发现你的记录。</p>
+ <form id="searchForm" class="search"><span>⌕</span><input id="search" type="search" placeholder="搜索对话、记忆、实体" aria-label="搜索对话、记忆、实体"><kbd>/</kbd></form>
+ <div class="section-title">记录类型 <button id="clearFilters">重置</button></div>
+ <div id="typeFilters" class="type-filters"></div>
+ <div class="memory-controls"><label>聊天对象 <select id="profileFilter" aria-label="按聊天对象筛选记忆"><option value="">全部对象</option></select></label><label>记忆状态 <select id="memoryStatus" aria-label="筛选记忆状态"><option value="">全部（含休眠）</option><option value="active">活跃</option><option value="dormant">休眠</option><option value="superseded">已被更新</option></select></label></div>
+ <details id="memoryEvents" class="memory-events"><summary>真实记忆活动 <span id="eventCount">0</span></summary><p class="event-help">召回、唤醒等事件来自记忆库。休眠不会删除对话。</p><div id="eventList"></div></details>
+ <div class="section-title">空间分区 <span id="groupCount"></span></div>
+ <div id="groups" class="groups"></div>
+ <div class="section-title">关系 <span>按原始字段连接</span></div>
+ <div id="edgeFilters" class="edge-filters"></div>
+ <div class="sidebar-note"><span>◈</span><p>每条连线都能追溯依据。<br>分区按项目与记录日期排列。</p></div>
+</aside>
+<main id="stage" aria-label="三维关联网络">
+ <div class="stage-heading"><div><span class="eyebrow">CONNECTED ARCHIVE</span><h2 id="viewTitle">对话的群落</h2><p id="viewSubtitle">项目、时间与父子关系，交织成你的记录。</p></div><span class="index">01 / NETWORK</span></div>
+ <div id="empty" class="empty" hidden><span>◎</span><h3>这里还没有记录</h3><p id="emptyText"></p><button id="emptyReset">查看全部对话</button></div>
+ <div class="scene-tools"><button id="home" title="回到总览">⌂ <span>总览</span></button><button id="motion" title="开启或关闭自动旋转">Ⅱ <span>暂停旋转</span></button><button id="labelsToggle">Aa <span>显示标题</span></button><button id="capture">↧ <span>保存画面</span></button></div>
+ <div id="notice" class="notice"></div>
+ <div class="scene-help"><span>拖动旋转</span><b>·</b><span>滚轮缩放</span><b>·</b><span>点击节点查看出处</span></div>
+</main>
+<aside id="detail" class="detail" hidden><button id="closeDetail" class="close" aria-label="关闭详情">×</button><div id="detailContent"></div></aside>
+<footer class="bottom"><div class="stats"><div><strong id="conversationCount">—</strong><span>对话</span></div><div><strong id="memoryCount">—</strong><span>已保存记忆</span></div><div><strong id="edgeCount">—</strong><span>已显示关系</span></div></div><div class="timeline"><div><span id="dateStart">—</span><label for="timeRange">时间切片 <strong id="dateEnd">全部记录</strong></label></div><input id="timeRange" type="range" min="0" max="1000" value="1000" aria-label="按记录创建时间筛选"></div><div class="updated"><i></i><span id="updated">本地快照</span><a href="USAGE.md" title="如何刷新或接入记忆库">使用说明 ↗</a></div></footer>
+<div id="tooltip" class="tooltip" hidden></div><div id="toast" class="toast" role="status" hidden></div>
+<script src="_lib/three.min.js"></script><script src="_lib/network-data.js"></script><script src="_lib/atlas.js"></script>
+</body></html>
