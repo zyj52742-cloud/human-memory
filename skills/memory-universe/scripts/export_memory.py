@@ -1,9 +1,6 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
-"""记忆宇宙 · 只读数据导出器（随 skills/memory-universe 分发的副本）
-
-相对原视图原型的改动：数据库仅处理显式传入路径；允许没有星图快照时
-只导出记忆库。除这两处外逻辑保持一致。
+"""记忆宇宙 · 只读数据导出器（随 memory-universe 技能分发）
 
 把两路真实数据合成一个前端可直接加载的 JS 数据文件：
 
@@ -95,7 +92,8 @@ EVENTS_OK = "ok"
 EVENTS_MISSING_TABLE = "missing_table"
 EVENTS_ERROR = "error"
 
-# 公开导出器只使用显式指定的数据库，不探测环境变量或个人默认库。
+# 默认库探测只查这些明确路径（不扫盘、不读无关会话正文）
+DEFAULT_DB_CANDIDATES = []  # Public exports use explicitly selected databases only.
 
 # 基础脱敏（按顺序执行，Bearer 先于赋值型规则）
 REDACTIONS = [
@@ -254,7 +252,7 @@ def _table_columns(conn: sqlite3.Connection, table: str) -> list[str]:
     return [str(r["name"]) for r in rows]
 
 
-def read_memories(db_path: str | Path) -> tuple[list[dict], str | None]:
+def read_memories(db_path: str | Path, *, include_deleted=False) -> tuple[list[dict], str | None]:
     """读取 memories 表全部行，返回 (行列表, 错误摘要)。
 
     只读、只 SELECT；缺表/坏文件返回错误摘要而不是抛异常。
@@ -285,6 +283,8 @@ def read_memories(db_path: str | Path) -> tuple[list[dict], str | None]:
 
     out: list[dict] = []
     for row in rows:
+        if not include_deleted and pick(row, "status", default="active") == "deleted":
+            continue
         mem_id = pick(row, "id", "memory_id", "memoryId")
         if mem_id is None:
             continue
@@ -433,7 +433,6 @@ def build_export(
     generated_at: str | None = None,
 ) -> dict:
     """构建导出数据（纯函数，不写文件）。"""
-    # 允许只给记忆库：此时没有对话/项目节点，记忆仍可单独浏览
     if not stars_paths and not db_paths:
         raise UsageError("至少需要一个 --stars 或 --db 输入")
 
@@ -540,6 +539,7 @@ def build_export(
     # ---- 记忆节点 + 实体/种类 hub --------------------------------------
     db_sources, probe_paths = resolve_db_paths(db_paths)
     for source in db_sources:
+        source["databaseId"] = db_key(source["path"])
         source.setdefault("eventsStatus", "missing")
         source.setdefault("eventsError", None)
         source.setdefault("eventsCount", 0)
@@ -565,8 +565,8 @@ def build_export(
             source["eventsStatus"] = "missing"
             source["eventsError"] = "数据库文件不存在（未创建），无事件可导出"
             continue
-        rows, error = read_memories(path)
-        source["count"] = len(rows)
+        rows, error = read_memories(path, include_deleted=True)
+        source["count"] = sum(m["status"] != "deleted" for m in rows)
         if error:
             source["status"] = "error"
             source["error"] = error
@@ -575,7 +575,7 @@ def build_export(
             continue
         source["status"] = "ok"
         source["error"] = None
-        mem_total += len(rows)
+        mem_total += source["count"]
 
         db_hash = db_key(path)
         memory_index: dict[str, dict] = {}  # 库内 id -> {id, profile, status}
@@ -596,6 +596,10 @@ def build_export(
                     "profile": profile,
                     "status": mem["status"],
                 }
+
+            # 取消保存的条目仅保留真实事件归属，不产生节点、关系或计数。
+            if mem["status"] == "deleted":
+                continue
 
             nodes.append(
                 _node(
@@ -660,9 +664,9 @@ def build_export(
             target = memory_index.get(key) if key is not None else None
             if target is not None:
                 profile = target["profile"]
-                memory_node_id = target["id"]
-                attribution = "memory"
-                matched = True
+                memory_node_id = target["id"] if target["status"] != "deleted" else None
+                attribution = "memory" if memory_node_id else "cancelled_memory"
+                matched = memory_node_id is not None
             elif key is None:
                 # memory_id 为空：如 resolve_signal 这类全局事件，无法归属到 profile
                 profile = None

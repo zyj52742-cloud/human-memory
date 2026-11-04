@@ -1,0 +1,12 @@
+{
+  "name": "local-memory-universe",
+  "version": "0.6.0-a2",
+  "description": "DSH 内的记忆宇宙、真实行星与类人脑记忆入口",
+  "type": "module",
+  "main": "host.js",
+  "exports": {".": "./host.js", "./client": "./client.js", "./package.json": "./package.json"},
+  "dsh": {
+    "bundle": {"patch": "./cordis.patch.yml"},
+    "client": {"inject": ["@deepseek-ai/dsh-api-remotes", "@deepseek-ai/dsh-client-ui-conversation", "@deepseek-ai/dsh-client-ui-sidebar-right"], "platform": "web"}
+  }
+}

@@ -5,6 +5,8 @@ description: 把本地对话与记忆导出成两个可离线打开的三维视�
 
 # memory-universe：记忆宇宙
 
+第二版 `v0.6.0a2`：八类天体、银河/环绕/同心轨道、Shift 平移、网络分组与 PNG 导出。
+
 一个**自包含**的本地技能：把 `human-memory` 的 SQLite 记忆库和星图快照，导出成两个双击即可打开的 HTML 页面；同时带一份便携记忆命令行。
 
 整个 `skills/memory-universe/` 目录复制走就能独立使用——不需要 DSH，不需要联网，不需要安装第三方包，也不依赖仓库里其他带日期的工程目录。
@@ -110,7 +112,8 @@ memory-universe/
 │   ├── memory-starmap.html  行星模板
 │   ├── USAGE.md             生成到输出目录的使用说明
 │   └── _lib/                atlas.js / atlas.css / memory-webgl.js /
-│                            three.min.js / tex_procedural.js
+│                            three.min.js / tex_procedural.js / atlas-groups.js /
+│                            atlas-memory.js / body-guide.js / body-catalog.png
 └── references/
     ├── data-formats.md      两个数据文件的字段说明
     └── optional-extraction.md  可选模型抽取的启用方式与边界
@@ -124,8 +127,8 @@ memory-universe/
 2. **“类人脑”是设计隐喻**，指按重要度分层、会休眠、可被线索唤醒、支持手动抢救；不是经过科学验证的人脑模拟，也没有效果学承诺。
 3. 视图是**只读浏览**；不会从页面反向修改记忆库。
 4. 行星与网络使用 Three.js / WebGL；非常老的浏览器或禁用硬件加速时可能显示异常。
-5. DSH 原生插件（本机已存在的集成）不在本技能内，公开包也不会自动安装它；本技能走通用“本地 CLI + 浏览器”入口。
-6. 本版不直接扫描 DSH 压缩会话日志；请先用已有星图工具生成 JSON/JS 快照，或只选择 human-memory SQLite 库。本技能不会自动安装扫描器或依赖。
+5. DSH 原生插件是完整仓库中的可选适配器 `integrations/dsh/`，独立技能 ZIP 不含它，也不会自动安装；本技能走通用“本地 CLI + 浏览器”入口。
+6. 便携技能不扫描 DSH 压缩会话日志；请用 JSON/JS 快照或 SQLite。完整仓库可选适配器另有本地内容索引，需 Python 3.14+ 与 Node.js 18+；不因本技能调用而自动扫描或安装。
 
 ---
 

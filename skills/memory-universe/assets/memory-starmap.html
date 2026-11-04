@@ -215,6 +215,34 @@
     #replay input[type=range]{width:20vw;flex:1}#replay .when{min-width:68px;font-size:10px}.toggle{font-size:10px}.panel-body{padding:14px 18px}
     body.has-panel .actions{right:14px}body.has-panel .topbar{right:0;grid-template-columns:1fr}body.has-panel .search{display:block}}
 
+  /* 天体外观与单星设置 */
+  .actions{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100vw - 60px)}
+  body.has-panel .actions{max-width:calc(100vw - 444px)}
+  select.iconbtn{font:inherit;font-size:12px;color:#e3d3b3;border:1px solid #6e604b;cursor:pointer}
+  select option{color:#e3d3b3;background:#11131c}
+  #spaceScale{min-width:108px}
+  .body-picker{display:block;width:100%;padding:10px 12px;border:1px solid #544e43;border-radius:7px;background:#0a0d14;color:#e3d3b3;font:inherit;font-size:13px}
+  .body-picker:disabled{opacity:.6}
+  .body-hint{font-size:11px;color:#9f9789;line-height:1.75;margin:8px 0 0}
+  @media(max-width:700px){.actions,body.has-panel .actions{max-width:none}}
+
+  /* 两排工具区：使用文档流排列，内嵌时沿用 DSH 的全局导航。 */
+  .topbar{top:12px;left:22px;right:22px;display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:12px 15px;background:linear-gradient(120deg,#0b101be0,#090d16ca);border:1px solid #8c765529;border-radius:12px;backdrop-filter:blur(18px);box-shadow:0 9px 38px #0003;pointer-events:auto}
+  .topbar .brand{flex-direction:row;align-items:baseline;gap:15px;margin-bottom:3px}.topbar .brand b{font-size:17px}.topbar .brand span{font-size:10px}
+  .toolbar-row{display:flex;align-items:center;gap:8px;min-width:0;width:100%;white-space:nowrap;overflow-x:auto;overflow-y:hidden;scrollbar-width:thin;scrollbar-color:#77614744 transparent;padding:1px 0 3px}
+  .toolbar-row>*{flex-shrink:0}.toolbar-row .seg{border-color:#82745a33;border-radius:7px}.toolbar-row .seg button{padding:7px 12px;font-size:12px}
+  .toolbar-row .iconbtn{padding:7px 10px;border-radius:7px;font-size:12px;line-height:18px;background:#1118238c;border-color:#7f6c4d55}
+  .toolbar-row .search{flex:1 1 210px;min-width:160px;max-width:390px;margin-left:auto}.toolbar-row .search input{padding:8px 38px 8px 31px;font-size:12px;background:#03070ba6;border-color:#8e7a5438}
+  .actions.toolbar-row{position:static!important;inset:auto!important;justify-content:flex-start;max-width:none!important;flex-wrap:nowrap!important;gap:8px}
+  .toolbar-spacer{flex:1 1 auto;min-width:0}.toolbar-row select.iconbtn{font-size:12px}
+  #formation{color:#edcf91;min-width:125px;border-color:#b2935d80;background:#25201788}#spaceScale{min-width:110px}
+  body.is-embedded .topbar{top:8px;left:14px;right:14px;padding:9px 12px;gap:5px}body.is-embedded .topbar>.brand{display:none}body.is-embedded #networkView{display:none!important}
+  body.has-panel .topbar{right:407px;grid-template-columns:none}
+  #quote{top:auto!important;bottom:89px;left:28px;width:255px;max-height:119px;padding:10px 13px;background:#090d16a8;border-left-color:#b99a5755;pointer-events:none}
+  #quote .line{font-size:11px;line-height:1.7;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}#quote .meta{font-size:9px}#quote .eyebrow{font-size:8px}
+  @media(max-width:1250px){#quote{display:none}}
+  @media(max-width:700px){.topbar,body.is-embedded .topbar,body.has-panel .topbar{top:8px;left:10px;right:10px;padding:8px 10px;gap:5px}.topbar .brand{display:none}.toolbar-row{gap:6px}.toolbar-row .iconbtn{font-size:11px;padding:6px 8px}.toolbar-row .seg button{font-size:11px;padding:6px 9px}.toolbar-row .search{min-width:145px}.toolbar-row .search input{font-size:11px}.toolbar-row select.iconbtn{font-size:11px}}
+
 </style>
 
 <style>
@@ -225,39 +253,39 @@
     font:600 10px/1.5 "Segoe UI","Microsoft YaHei",sans-serif;
     letter-spacing:.06em;white-space:nowrap;vertical-align:middle}
 </style>
+{{DEMO_FLAG}}
 </head>
 <body>
+<script>if(self!==top||new URLSearchParams(location.search).get("embedded")==="1")document.body.classList.add("is-embedded");</script>
 <canvas id="cosmos" aria-hidden="true"></canvas>
 <canvas id="sky" aria-label="可拖拽旋转的记忆星图"></canvas>
 
 <div class="topbar">
   <div class="brand"><b><span class="dot">✦</span> 记忆星图{{DEMO_BANNER}}</b><span id="brandSub">加载中…</span></div>
-  <div class="search">
+<div class="toolbar-row toolbar-primary">
+  <div class="seg" id="layoutSeg">
+    <button data-layout="ball" class="on">星域</button>
+    <button data-layout="time">时间轴</button>
+    <button data-layout="project">项目团</button>
+  </div><select class="iconbtn" id="formation" aria-label="星域布局" title="保留不同的星域形态"><option value="spiral">旋臂星系</option><option value="orbit">立体环绕</option><option value="rings">同心轨道</option></select><button class="iconbtn" id="homeBtn" title="缩远并查看完整星域">全景</button><button class="iconbtn" id="motionBtn" title="暂停或继续公转">暂停</button>  <div class="search">
     <span class="ico">⌕</span>
     <input id="q" type="text" placeholder="搜索标题或第一句话…（按 / 聚焦）" autocomplete="off" spellcheck="false">
     <span class="hits" id="hits"></span>
   </div>
-  <div class="seg" id="layoutSeg">
-    <button data-layout="ball" class="on">轨道</button>
-    <button data-layout="time">时间轴</button>
-    <button data-layout="project">项目团</button>
-  </div>
-
 </div>
-
-<div class="actions"> <a class="iconbtn" id="networkView" href="01-记忆宇宙.html" style="text-decoration:none;display:inline-flex;align-items:center">◈ 关联网络</a> <div class="seg" id="filterSeg">
+<div class="actions toolbar-row toolbar-secondary">
+<select class="iconbtn" id="spaceScale" aria-label="星域空间大小" title="原空间恢复球状立体环绕；其他档位扩大天体间距，Shift 加拖动可平移浏览">
+    <option value="1">原空间</option><option value="2.2">宽阔星域 ×2.2</option><option value="3.2">广袤星域 ×3.2</option>
+  </select><select class="iconbtn" id="bodyTheme" aria-label="天体外观" title="混合天体含八类外观；经典行星只显示原行星">
+    <option value="mixed">混合天体</option><option value="classic">经典行星</option>
+  </select><div class="seg" id="filterSeg">
     <button data-filter="all" class="on">全部</button>
     <button data-filter="fav">收藏</button>
-  </div>
-  <button class="iconbtn" id="tourBtn">✦ 巡览</button>
-  <button class="iconbtn" id="addStar">＋ 加星</button>
-  <button class="iconbtn" id="homeBtn" title="返回完整星图">总览</button>
-  <button class="iconbtn" id="motionBtn" title="暂停或继续公转">暂停</button>
-  <button class="iconbtn" id="exportBtn" title="导出收藏、标签和手动星">备份</button>
-  <button class="iconbtn" id="importBtn" title="导入本页导出的个人标记">导入</button>
+  </div><button class="iconbtn" id="tourBtn">✦ 巡览</button><button class="iconbtn" id="addStar">＋ 加星</button><a class="iconbtn" id="networkView" href="01-记忆宇宙.html" style="text-decoration:none;display:inline-flex;align-items:center">◈ 关联网络</a><span class="toolbar-spacer"></span><button class="iconbtn" id="exportBtn" title="导出收藏、标签、天体外观和手动星">备份</button><button class="iconbtn" id="importBtn" title="导入本页导出的个人标记">导入</button>
+</div>
 </div>
 <input type="file" id="importFile" accept="application/json,.json" class="hide">
-<div id="atlasNote">MEMORY ATLAS / 私人对话档案<br><span id="focusNote">每颗行星是一段对话 · 小卫星是派生会话</span></div>
+<div id="atlasNote">MEMORY ATLAS / 私人对话档案<br><span id="focusNote">每颗天体是一段对话 · 小卫星是派生会话</span></div>
 <div id="tooltip"></div>
 
 <div id="quote">
@@ -385,6 +413,13 @@
   function saveProfile(){
     try { localStorage.setItem(PKEY, JSON.stringify(profile)); } catch(e){ toast("浏览器禁止本地存储，改动只在本次有效"); }
   }
+  if (!profile.appearance) profile.appearance = {};
+  var bodyCatalog = window.MemoryWebGL && MemoryWebGL.BODY_TYPES || [];
+  function validBodyType(id){ return bodyCatalog.some(function(t){ return t.id === id; }); }
+  function bodyMeta(n){
+    var id = webgl && webgl.resolveBodyType ? webgl.resolveBodyType(n, state.bodyTheme) : "planet";
+    return bodyCatalog.filter(function(t){ return t.id === id; })[0] || {id:"planet",label:"经典行星"};
+  }
   function pOf(id){ return profile.stars[id] || (profile.stars[id] = {}); }
 
   /* ---------------- 项目配色 ---------------- */
@@ -416,6 +451,7 @@
       phase: h01(s.id)*TAU,
       hue: tintOf(projColor[s.project] || PALETTE[0], s.id),
       r: 0, alpha: 1, targetAlpha: 1,
+      bodyTypeOverride: validBodyType((profile.stars[s.id] || {}).bodyType) ? profile.stars[s.id].bodyType : null,
       visible: true, match: true, fav: !!(profile.stars[s.id] && profile.stars[s.id].fav)
     };
     if (kind === "main") {
@@ -455,6 +491,10 @@
 
   var state = {
     layout: "ball",
+    formation: Number(profile.appearance.spaceScale)===1 ? "orbit" : (["spiral","orbit","rings"].indexOf(profile.appearance.formation)>=0 ? profile.appearance.formation : "spiral"),
+    spaceScale: [1,2.2,3.2].indexOf(Number(profile.appearance.spaceScale))>=0 ? Number(profile.appearance.spaceScale) : 2.2,
+    dragPan: false,
+    bodyTheme: profile.appearance.theme === "classic" ? "classic" : "mixed",
     filter: "all",
     q: "",
     scale: 1,
@@ -467,7 +507,7 @@
     hover: null,
     dragging: false,
     dragMoved: 0,
-    rotX: -1.10,         // 盘面俯仰（更像从高处俯瞰的太阳系仪）
+    rotX: -0.88,         // 盘面俯仰（更像从高处俯瞰的太阳系仪）
     rotY: 0.35,          // 盘面方位
     spin: true,          // 自动公转
     zoom: 1,          // 当前缩放（每帧缓动）
@@ -475,7 +515,7 @@
     camX: 0, camY: 0, camZ: 0,    // 镜头中心（盘面世界坐标）—— 聚焦某颗星时平移过去
     tCamX: 0, tCamY: 0, tCamZ: 0,  // 镜头中心的目标值
     focusStar: null,     // 正在聚焦的星（镜头每帧跟随它，像以它为参考系）
-    fov: 1250            // 透视焦距：越小近大远小越明显（更有 3D 纵深感）
+    fov: 3000            // 透视焦距：越小近大远小越明显（更有 3D 纵深感）
   };
 
   function projectBands(){
@@ -572,8 +612,8 @@
   }
 
   // 轨道：像太阳系，最新在中心，越早轨道越大；沿轨道公转，内圈快、外圈慢
-  function orbitInner(){ return Math.max(75, Math.min(W,H)*0.17); }
-  function orbitOuter(){ return Math.min(W*0.40, H*0.37); }
+  function orbitInner(){ return (state.formation==="orbit" ? Math.max(75,Math.min(W,H)*.17) : Math.max(65,Math.min(W,H)*.09)) * state.spaceScale; }
+  function orbitOuter(){ return Math.min(W*0.40, H*0.37) * state.spaceScale; }
   function orbitSpan(){ return Math.max(70, orbitOuter() - orbitInner()); }
   // 小组：把主对话按时间顺序切片，每片共用「一条轨道 + 一个自己的倾斜平面」
   // 各片平面按球面均匀方向错开，所以整体不是一个平面盘，而是球状的轨道网络
@@ -592,7 +632,7 @@
       if (!mem.length) break;
       var lat = (-1 + 2*(gi+0.5)/N) * 0.55;            // 纬度 ±31°：有立体感又不翻到背面
       var lon = gi * 2.3999632297;                     // 黄金角，方位均匀错开
-      var nrm = [Math.cos(lat)*Math.cos(lon), Math.sin(lat), Math.cos(lat)*Math.sin(lon)];
+      var nrm = state.formation !== "orbit" ? [Math.sin(lon)*0.022,1,Math.cos(lon)*0.022] : [Math.cos(lat)*Math.cos(lon), Math.sin(lat), Math.cos(lat)*Math.sin(lon)];
       var ref = Math.abs(nrm[1]) > 0.9 ? [1,0,0] : [0,1,0];
       var u = vnorm(vcross(nrm, ref));
       var v = vnorm(vcross(nrm, u));
@@ -606,9 +646,41 @@
         x.gi = gi; x.gu = u; x.gv = v;
         x.orbR = R;
         x.orbA = (k + 0.5)/mem.length * TAU + gi*1.73;  // 组内沿轨道排开
-        x.orbW = 0.10 * Math.pow(R0 / R, 0.55);          // 内快外慢
+        x.orbW = 0.10 * Math.pow(R0 / R, 0.55) / Math.sqrt(state.spaceScale);          // 内快外慢
       });
     }
+  }
+
+
+  var galaxyTurn=0;
+  function spiralRadius(t){return orbitInner()*0.40+Math.pow(t,0.92)*(orbitOuter()-orbitInner()*0.40);}
+  function updateSpiralCurves(){
+    if(state.formation!=="spiral")return;
+    orbitGroups.forEach(function(g){
+      if(!g.curve)return;
+      var count=g.curve.length/3;
+      for(var j=0;j<count;j++){
+        var t=j/(count-1),r=spiralRadius(t),a=g.arm*TAU/4+4.25*t+galaxyTurn;
+        g.curve[j*3]=r*Math.cos(a);g.curve[j*3+1]=Math.sin(t*TAU+g.arm*.8)*r*.022;g.curve[j*3+2]=r*Math.sin(a)*.94;
+      }
+    });
+  }
+  function buildSpiralGroups(){
+    var mains=nodes.filter(function(n){return n.kind==="main";}).sort(function(a,b){return (b.s.last||b.s.created)-(a.s.last||a.s.created);});
+    orbitGroups=[];galaxyTurn=0;
+    for(var arm=0;arm<4;arm++){
+      var mem=mains.filter(function(n,i){return i%4===arm;});
+      var group={arm:arm,curve:new Float32Array(129*3),u:[1,0,0],v:[0,0,1],R:orbitOuter(),mem:mem};
+      orbitGroups.push(group);
+      mem.forEach(function(n,k){
+        var t=(k+.55)/(mem.length+.10),r=spiralRadius(t);
+        n.gi=arm;n.gu=group.u;n.gv=group.v;n.orbR=r+(h01(n.id+'scatterR')-.5)*24;
+        n.spiralAngle=arm*TAU/4+4.25*t+(h01(n.id+'scatterA')-.5)*.05;
+        n.spiralY=Math.sin(t*TAU+arm*.8)*r*.022;
+        n.orbA=n.spiralAngle;n.orbW=0;
+      });
+    }
+    updateSpiralCurves();
   }
 
   function layoutOrbit(){
@@ -625,7 +697,7 @@
       }
       n.rec = clamp(((n.s.created||n.s.last) - t0)/span, 0, 1); // 1 = 最新
     });
-    buildGroups();
+    if(state.formation==="spiral")buildSpiralGroups();else buildGroups();
     // 子代理 = 卫星：绕父星公转，平面跟父星同一个（地球-月球）
     // 按 depth 升序处理，保证「父星先拿到平面」，嵌套子代理也能继承
     var subs = nodes.filter(function(n){ return n.kind === "sub"; });
@@ -665,6 +737,9 @@
                pw[2] + n.sR*(ca*u[2] + sa*v[2]) ];
     }
     if (n.kind === "gone" || !n.orbR) return [0,0,0];
+    if(state.formation==="spiral"&&n.kind==="main"&&Number.isFinite(n.spiralAngle)){
+      var sa=n.spiralAngle+galaxyTurn;return [n.orbR*Math.cos(sa),n.spiralY||0,n.orbR*Math.sin(sa)*.94];
+    }
     var a = n.orbA, R = n.orbR;
     var uu = n.gu || [1,0,0], vv = n.gv || [0,0,1];
     var c = Math.cos(a), s = Math.sin(a);
@@ -1174,6 +1249,14 @@
   var gradCache = { key:"", arr:[] };
   function drawOrbitRings(){
     if (state.layout !== "ball") return;
+    if(state.formation==="spiral"){
+      ctx.save();ctx.strokeStyle="rgba(169,183,215,.13)";ctx.lineWidth=.7;
+      orbitGroups.forEach(function(g){
+        if(!g.curve)return;ctx.beginPath();
+        for(var i=0;i<g.curve.length;i+=3){var p=project3([g.curve[i],g.curve[i+1],g.curve[i+2]]);if(i)ctx.lineTo(p[0],p[1]);else ctx.moveTo(p[0],p[1]);}
+        ctx.stroke();
+      });ctx.restore();return;
+    }
     var gkey = W + "x" + H;
     if (gradCache.key !== gkey){ gradCache.key = gkey; gradCache.arr = []; gradCache.core = null; }
     var span = Math.max(1, t1-t0);
@@ -1693,8 +1776,10 @@
     });
   }
   function syncFocusNote(){
-    var f=state.focusStar, text="每颗行星是一段对话 · 小卫星是派生会话";
-    if(f) text="正在查看："+(f.s.title||"未命名对话")+" · 点「总览」返回";
+    var inView=nodes.filter(function(n){return n.visible&&n.px>=0&&n.px<=W&&n.py>=0&&n.py<=H;}).length;
+    var formationNames={spiral:"旋臂星系",orbit:"立体环绕",rings:"同心轨道"};
+    var f=state.focusStar, text=formationNames[state.formation]+" ×"+state.spaceScale+" · 当前视野 "+inView+" / "+nodes.length+" · Shift+拖动平移";
+    if(f) text="正在查看："+(f.s.title||"未命名对话")+" · 点「全景」查看整个星域";
     document.getElementById("focusNote").textContent=text;
   }
 
@@ -1728,6 +1813,7 @@
       state.camZ = lerp(state.camZ, state.tCamZ, kc);
       state.zoom = lerp(state.zoom, state.tZoom, kc);
       if (Math.abs(state.camX - state.tCamX) < 0.4) state.camX = state.tCamX;
+      if (Math.abs(state.camY - state.tCamY) < 0.4) state.camY = state.tCamY;
       if (Math.abs(state.camZ - state.tCamZ) < 0.4) state.camZ = state.tCamZ;
       if (Math.abs(state.zoom - state.tZoom) < 0.002) state.zoom = state.tZoom;
     }
@@ -1735,6 +1821,7 @@
     // 轨道：每帧推进公转角 + 投影
     if (state.layout === "ball") {
       var spd = state.spin ? 1 : 0;
+      if(state.formation==="spiral"){galaxyTurn+=dt*spd*.022;updateSpiralCurves();}
       for (var bi=0;bi<nodes.length;bi++){
         var bn = nodes[bi];
         if (bn.kind === "sub") bn.sA += bn.sW * dt * spd * 0.22;   // 卫星绕父星转：一圈约 30 秒，能看清也能点中
@@ -1846,9 +1933,11 @@
     pTitle.textContent = s.title || "未命名对话";
 
     var pf = profile.stars[s.id] || {};
+    var meta = bodyMeta(n);
     var chips = [];
     chips.push('<span class="chip proj">' + esc(s.project || "未知") + '</span>');
     if (s.sub) chips.push('<span class="chip sub">子代理 · 第 ' + (s.depth||1) + ' 层</span>');
+    if (n.kind !== "gone") chips.push('<span class="chip" id="bodyLabel">' + esc(meta.label) + '</span>');
     if (pf.fav) chips.push('<span class="chip fav">★ 收藏</span>');
     if (n.kind === "gone") chips.push('<span class="chip">已归档</span>');
 
@@ -1865,6 +1954,16 @@
     if (s.firstAsst) {
       html += '<div class="sect">它当时的第一句回答</div>';
       html += '<div class="quote asst">' + esc(s.firstAsst) + '</div>';
+    }
+
+    if (n.kind !== "gone") {
+      var classic = state.bodyTheme === "classic";
+      html += '<label class="sect" for="bodyTypeSelect">天体外观</label>';
+      html += '<select class="body-picker" id="bodyTypeSelect"' + (classic || !webgl ? ' disabled' : '') + '>';
+      html += '<option value=""' + (!validBodyType(pf.bodyType) ? ' selected' : '') + '>自动分配 · 同一对话保持固定</option>';
+      html += bodyCatalog.map(function(t){ return '<option value="' + esc(t.id) + '"' + (pf.bodyType === t.id ? ' selected' : '') + '>' + esc(t.label) + '</option>'; }).join('');
+      html += '</select><p class="body-hint" id="bodyHint">' +
+        (!webgl ? '当前为兼容视图，三维天体外观暂不可用。' : classic ? '经典模式统一显示原行星。切回「混合天体」可继续使用已保存的单星外观。' : '只改变显示外观，自动类型按对话 ID 固定分配。') + '</p>';
     }
 
     var tags = pf.tags || [];
@@ -1892,6 +1991,15 @@
     }
 
     pBody.innerHTML = html;
+    var bodySelect = document.getElementById("bodyTypeSelect");
+    if (bodySelect) bodySelect.onchange = function(){
+      var p = pOf(s.id), v = this.value;
+      if (validBodyType(v)) p.bodyType = v; else delete p.bodyType;
+      n.bodyTypeOverride = validBodyType(v) ? v : null;
+      saveProfile();
+      document.getElementById("bodyLabel").textContent = bodyMeta(n).label;
+      toast(v ? "已换为" + bodyMeta(n).label : "已恢复自动外观");
+    };
 
     document.getElementById("favBtn").onclick = function(){
       var p = pOf(s.id); p.fav = !p.fav; n.fav = p.fav; saveProfile(); openStar(n); toast(p.fav ? "已收藏" : "已取消收藏");
@@ -1996,7 +2104,7 @@
     state.zoom = 1; state.tZoom = 1;
     state.camX = 0; state.camY=0; state.camZ = 0; state.tCamX = 0; state.tCamY=0; state.tCamZ = 0;
     state.focusStar = null;
-    state.rotX = -1.02; state.rotY = 0.35;
+    state.rotX = state.formation==="spiral"?-.88:-1.10; state.rotY = 0.35;
     relayout(true);
   }
   document.getElementById("layoutSeg").addEventListener("click", function(e){
@@ -2067,8 +2175,14 @@
       state.dragMoved += Math.abs(e.movementX || 0) + Math.abs(e.movementY || 0);
       if (state.layout === "time") state.panX += (e.movementX || 0);
       else if (state.layout === "ball") {
-        state.rotY += (e.movementX || 0) * 0.006;
-        state.rotX = clamp(state.rotX - (e.movementY || 0) * 0.006, -1.15, 1.15);
+        if (state.dragPan) {
+          var dx=(e.movementX||0)/state.zoom,dy=(e.movementY||0)/state.zoom;
+          var cy=Math.cos(state.rotY),sy=Math.sin(state.rotY),cx=Math.cos(state.rotX),sx=Math.sin(state.rotX);
+          state.focusStar=null;
+          state.tCamX-=cy*dx+sy*sx*dy;state.tCamY-=cx*dy;state.tCamZ-=sy*dx-cy*sx*dy;
+          state.camX=state.tCamX;state.camY=state.tCamY;state.camZ=state.tCamZ;
+        } else state.rotY += (e.movementX || 0) * 0.006;
+        if(!state.dragPan) state.rotX = clamp(state.rotX - (e.movementY || 0) * 0.006, -1.15, 1.15);
       }
       tooltip.classList.remove("show");
       return;
@@ -2087,12 +2201,12 @@
   });
   canvas.addEventListener("mousedown", function(e){
     if (tour.on) stopTour();
-    state.dragging = true; state.dragMoved = 0; canvas.classList.add("dragging");
+    state.dragPan = !!e.shiftKey; state.dragging = true; state.dragMoved = 0; canvas.classList.add("dragging");
   });
   addEventListener("mouseup", function(e){
     if (state.dragging) {
       state.dragging = false; canvas.classList.remove("dragging");
-      if (state.dragMoved < 6) {
+      if (state.dragMoved < 6 && !state.dragPan) {
         var n = pick(e.clientX, e.clientY);
         if (n) openStar(n); else closePanel();
       }
@@ -2102,7 +2216,7 @@
     if (state.layout === "ball") {
       e.preventDefault();
       if (tour.on) stopTour();
-      state.tZoom = clamp(state.tZoom * (e.deltaY < 0 ? 1.12 : 0.893), 0.6, 3.4);
+      state.tZoom = clamp(state.tZoom * (e.deltaY < 0 ? 1.12 : 0.893), 0.16, 5.5);
       return;
     }
     if (state.layout !== "time") return;
@@ -2120,7 +2234,7 @@
     stopTour();
     state.scale = 1; state.panX = 0;
     state.rotX = -1.02; state.rotY = 0.35;
-    focusOn(null);          // 缓动回全景
+    focusOn(null); state.tZoom=0.82/state.spaceScale; // 缓动到完整星域
   });
 
   /* ---------------- 启动 ---------------- */
@@ -2131,7 +2245,7 @@
   document.getElementById("stats").innerHTML =
     '<b>' + DATA.mainCount + '</b> 个主对话 · <b>' + DATA.subCount + '</b> 个子代理 · <b>' +
     (DATA.archived||[]).length + '</b> 颗已归档<br>' +
-    '点星看详情 · 拖拽倾斜视角 · 滚轮缩放 · 双击复位';
+    '拖动旋转 · Shift+拖动平移 · 滚轮缩放 · 全景查看全部';
 
   // 手动星进图
   profile.custom.forEach(function(c){
@@ -2212,7 +2326,7 @@
       if (cand && nodeById[cand.id]) openStar(nodeById[cand.id]);
     }
   } catch(e){}
-  document.getElementById("homeBtn").onclick=function(){stopTour();closePanel();state.scale=1;state.panX=0;state.rotX=-1.10;state.rotY=.35;focusOn(null);};
+  document.getElementById("homeBtn").onclick=function(){stopTour();closePanel();state.scale=1;state.panX=0;state.rotX=state.formation==="spiral"?-.88:-1.10;state.rotY=.35;focusOn(null);state.tZoom=0.95/state.spaceScale;};
   document.getElementById("motionBtn").onclick=function(){state.spin=!state.spin;this.textContent=state.spin?"暂停":"继续";};
   document.getElementById("exportBtn").onclick=function(){
     var blob=new Blob([JSON.stringify({format:"memory-atlas-profile",version:1,exportedAt:new Date().toISOString(),profile:profile},null,2)],{type:"application/json"});
@@ -2223,9 +2337,50 @@
     try{var file=this.files[0];if(!file)return;if(file.size>5000000)throw new Error("文件过大");
       var d=JSON.parse(await file.text());if(d.format!=="memory-atlas-profile"||!d.profile||typeof d.profile.stars!=="object"||!Array.isArray(d.profile.custom))throw new Error("请选择本星图导出的标记文件");
       profile.stars=Object.assign({},profile.stars,d.profile.stars);
+      if(d.profile.appearance&&["spiral","orbit","rings"].indexOf(d.profile.appearance.formation)>=0)profile.appearance.formation=d.profile.appearance.formation;
+      if(d.profile.appearance && ["mixed","classic"].indexOf(d.profile.appearance.theme)>=0) profile.appearance.theme=d.profile.appearance.theme;
+      if(d.profile.appearance && [1,2.2,3.2].indexOf(Number(d.profile.appearance.spaceScale))>=0) profile.appearance.spaceScale=Number(d.profile.appearance.spaceScale);
       d.profile.custom.forEach(function(c){if(!c||typeof c.id!=="string"||!c.id.startsWith("custom-")||typeof c.title!=="string")return;if(!profile.custom.some(function(x){return x.id===c.id;}))profile.custom.push(c);});
       saveProfile();location.reload();
     }catch(e){toast("导入失败："+e.message);}finally{this.value="";}
+  };
+  var themeSelect = document.getElementById("bodyTheme");
+  themeSelect.value = state.bodyTheme;
+  themeSelect.onchange = function(){
+    state.bodyTheme = this.value === "classic" ? "classic" : "mixed";
+    profile.appearance.theme = state.bodyTheme; saveProfile();
+    if (state.selected) openStar(state.selected);
+    toast(state.bodyTheme === "classic" ? "经典行星外观" : "混合天体 · 八类外观");
+  };
+  function setFormation(value,save){
+    state.formation=["spiral","orbit","rings"].indexOf(value)>=0?value:"spiral";
+    stopTour();closePanel();
+    if(state.formation==="orbit")state.spaceScale=1;
+    else if(state.spaceScale===1)state.spaceScale=2.2;
+    state.fov=state.formation==="orbit"?1250*Math.max(1,state.spaceScale):3000;
+    state.rotX=state.formation==="spiral"?-.88:-1.10;state.rotY=.35;
+    state.camX=state.camY=state.camZ=state.tCamX=state.tCamY=state.tCamZ=0;state.zoom=state.tZoom=1;
+    document.getElementById("formation").value=state.formation;
+    document.getElementById("spaceScale").value=String(state.spaceScale);
+    if(save){profile.appearance.formation=state.formation;profile.appearance.spaceScale=state.spaceScale;saveProfile();}
+    if(state.layout!=="ball")setLayout("ball");else relayout(false);
+  }
+  var formationSelect=document.getElementById("formation");formationSelect.value=state.formation;
+  formationSelect.onchange=function(){setFormation(this.value,true);};
+  state.fov=state.formation==="orbit"?1250*Math.max(1,state.spaceScale):3000;
+  if(state.formation==="orbit")state.rotX=-1.10;
+  var spaceSelect = document.getElementById("spaceScale");
+  spaceSelect.value=String(state.spaceScale);
+  spaceSelect.onchange=function(){
+    if(Number(this.value)===1){
+      setFormation("orbit",true);
+      toast("原空间 · 立体环绕");
+      return;
+    }
+    state.spaceScale=Number(this.value)||2.2;profile.appearance.spaceScale=state.spaceScale;saveProfile();
+    state.fov=state.formation==="orbit"?1250*Math.max(1,state.spaceScale):3000;
+    closePanel();state.zoom=state.tZoom=1;relayout(false);
+    toast("星域已扩大到 ×"+state.spaceScale+" · Shift+拖动平移，点全景看全部");
   };
   document.getElementById("motionBtn").textContent=state.spin?"暂停":"继续";
   if(glError)toast("已切换兼容视图");
@@ -2235,11 +2390,12 @@
   syncSlider();
   requestAnimationFrame(frame);
 
-  window.__STARMAP__ = { renderer:webgl, glError:glError, getFPS:function(){return measuredFPS;}, pick:pick, project3:project3, worldOf:worldOf, setLayout:setLayout, profile:profile, saveProfile:saveProfile, data:DATA, state:state, nodes:nodes, neighborMap:neighborMap, openStar:openStar, relayout:relayout, introStars:introStars, INTRO_T:INTRO_T, drawIntro:drawIntro, setIntroT:function(v){ INTRO_T = v; } };
+  window.__STARMAP__ = { renderer:webgl, glError:glError, getFPS:function(){return measuredFPS;}, getGroups:function(){return orbitGroups;}, setFormation:setFormation, pick:pick, project3:project3, worldOf:worldOf, setLayout:setLayout, profile:profile, saveProfile:saveProfile, data:DATA, state:state, nodes:nodes, neighborMap:neighborMap, openStar:openStar, relayout:relayout, introStars:introStars, INTRO_T:INTRO_T, drawIntro:drawIntro, setIntroT:function(v){ INTRO_T = v; } };
   document.getElementById('networkView').addEventListener('click',function(){
     if(state.selected)this.href='01-记忆宇宙.html?select='+encodeURIComponent('conv:'+(state.selected.id||state.selected));
   });
 })();
 </script>
+<script src="_lib/body-guide.js"></script>
 </body>
 </html>

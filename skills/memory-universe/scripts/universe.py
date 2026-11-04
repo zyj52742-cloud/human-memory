@@ -56,13 +56,17 @@ PAGES = {
 STATIC_ASSETS = (
     "atlas.js",
     "atlas.css",
+    "atlas-groups.js",
+    "atlas-memory.js",
+    "body-guide.js",
+    "body-catalog.png",
     "three.min.js",
     "memory-webgl.js",
     "tex_procedural.js",
 )
 DEMO_DB_NAME = "demo-memory.db"
 
-VERSION = "0.6.0a1"
+VERSION = "0.6.0a2"
 
 LLM_ENV_KEYS = ("MEMORY_LLM_BASE_URL", "MEMORY_LLM_API_KEY", "MEMORY_LLM_MODEL")
 
@@ -139,6 +143,7 @@ def _write_pages(out_dir: Path, demo: bool) -> None:
     replacements = {
         "{{DEMO_BANNER}}": BANNER_HTML if demo else "",
         "{{TITLE_SUFFIX}}": TITLE_SUFFIX_DEMO if demo else "",
+        "{{DEMO_FLAG}}": "<script>window.__MEMORY_DEMO__=true;</script>" if demo else "",
     }
     for template_name, page_name in (
         ("memory-universe.html", PAGES["network"]),

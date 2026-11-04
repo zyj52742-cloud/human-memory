@@ -1,6 +1,6 @@
 # human-memory · 类人脑记忆与记忆宇宙
 
-**预览版 v0.6.0a1**
+**第二版 · 预览版 v0.6.0a2**
 
 给 AI 装一套像人脑的记忆：**重要的记牢，日常的会淡，被提到才想起，可手动抢救。**
 
@@ -9,6 +9,17 @@ Python 只用标准库，数据保存在本机的 SQLite 文件中。附带一�
 > Human-memory is a local, dependency-free memory engine for AI assistants, plus a "memory universe" skill that renders your conversations and memories as two offline 3D views.
 
 ---
+
+
+## 第二版更新（2026-11-04）
+
+- **八类天体**：经典行星、带环行星、冰封星球、熔岩星球、海洋星球、恒星、小行星、彗星；可逐星切换，收藏、标签和外观可备份导入。
+- **星域与视角**：四旋臂银河、银河天幕、立体环绕、同心轨道、宽阔/完整全景与双排工具栏。
+- **操作补齐**：两个视图均支持 Shift + 左键拖动平移；网络支持节点标题显隐与保存 PNG。
+- **关联网络**：项目/日期分组与内容话题分组；内容连线明确标为推测，可查看原文依据并忽略单条关系。没有内容关联输入的普通快照默认按项目/日期展示。
+- **DSH 原生适配器**：随仓库提供真实/虚构模式切换、会话定位、手动保存与取消保存、内容索引、iframe 判源及 GPU 生命周期修复。适配器需要手工接入 DSH，不会随 demo 自动安装。
+
+下载：[第二版 Release](https://github.com/zyj52742-cloud/human-memory/releases/tag/v0.6.0a2)。便携技能见 `skills/memory-universe/`；DSH 适配器与准备命令见 [integrations/dsh/README.md](integrations/dsh/README.md)。
 
 ## 先跑一个虚构 demo（不需要真实数据）
 
@@ -117,11 +128,14 @@ python skills/memory-universe/scripts/universe.py export `
 - Windows / macOS / Linux 按设计可用；本次发布只在 **Windows + Python 3.14 + Chrome** 上实测，其他系统与版本未逐项实测。
 - 两个视图需要支持 WebGL 的现代浏览器（Chrome / Edge / Firefox / Safari 近年版本）。
 - 星图快照输入支持 `data.js`（`window.__STAR_DATA__`）与同结构 JSON；记忆库输入为 `human-memory` 自己生成的 SQLite。
-- 本版不提供直接扫描 DSH 压缩会话日志（`.jsonl.zstd`）的入口。请使用已有星图工具生成的 JSON/JS 快照，或只导出 human-memory SQLite 记忆库；不会为此自动安装依赖。
+- 便携技能使用星图 JSON/JS 快照或 human-memory SQLite，不扫描 DSH 会话。可选 DSH 适配器提供本地压缩会话扫描与内容索引，需要 Python 3.14+（标准库 zstd）及 Node.js 18+，详见适配器说明；不会自动安装依赖。
 
 ---
 
 ## 测试
+
+本次第二版发布副本已验证：8 项 CLI 回归、38 项真实 WebGL 浏览器检查、23 项保存/取消与跨库隔离检查、15 项内容关联检查、7 项原始日志解析检查、16 项 HTTP/路径检查及 20 项语法检查。截图来自虚构 demo；本次未重新安装生产 DSH，也未重跑 30 分钟稳定性测试。
+
 
 ```powershell
 python selftest.py                  # 引擎自测
@@ -143,7 +157,7 @@ python bench.py                     # 可选：本机小规模性能自测
 5. **“类人脑”是设计隐喻**：指分层、休眠、线索唤醒、手动抢救这些机制；不是经过科学验证的人脑模拟，也没有效果学承诺。
 6. **不会自动跨轮召回**：是否调用、何时调用取决于宿主 AI。
 7. **可选模型抽取**：新 `memory-universe` 入口默认关闭；旧根 CLI / MCP / 旧技能是原项目行为——三个 `MEMORY_LLM_*` 变量齐全就启用。在 8 GB 显存机器上试过本地小模型，输出质量不稳定，因此没有把它设为默认。
-8. **视图是只读浏览**：行星页与网络页不会反向修改记忆库；禁用 WebGL 的浏览器可能显示异常。
+8. **便携快照是只读浏览**。DSH 内的真实记录页另有明确的保存/取消保存操作，需要原生适配器；虚构 demo 始终只读。禁用 WebGL 的浏览器可能显示异常。
 
 ---
 
@@ -164,6 +178,7 @@ human-memory/
 ├── skills/
 │   ├── memory/             日常记忆技能
 │   └── memory-universe/    记忆宇宙技能（两个视图 + 便携 CLI）
+├── integrations/dsh/       可选 DSH 原生适配器与准备命令
 ├── tests/
 │   └── test_universe.py    记忆宇宙回归测试
 ├── ARCHITECTURE.md         架构说明

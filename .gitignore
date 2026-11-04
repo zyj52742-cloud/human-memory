@@ -49,3 +49,11 @@ skills/memory-universe/.demo-build/
 .vscode/
 .idea/
 .DS_Store
+
+# DSH adapter: generated runtime, indexes and conversations stay local.
+integrations/dsh/_runtime/
+**/stars.js
+**/content-index.json
+**/content-links.json
+**/*.jsonl
+**/*.jsonl.zstd
