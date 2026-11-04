@@ -57,3 +57,6 @@ integrations/dsh/_runtime/
 **/content-links.json
 **/*.jsonl
 **/*.jsonl.zstd
+
+# Generated public website
+_site/

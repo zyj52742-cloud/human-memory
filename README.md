@@ -2,6 +2,10 @@
 
 **第二版 · 预览版 v0.6.0a2**
 
+**[在线试玩](https://zyj52742-cloud.github.io/human-memory/) · [直接打开星图](https://zyj52742-cloud.github.io/human-memory/demo/02-%E8%AE%B0%E5%BF%86%E6%98%9F%E5%9B%BE.html) · [下载 Skill](https://github.com/zyj52742-cloud/human-memory/releases/tag/v0.6.0a2)**
+
+把散落的 AI 对话与长期记忆，变成可以探索、可以追溯的星空。在线试玩使用虚构数据，无需安装。
+
 给 AI 装一套像人脑的记忆：**重要的记牢，日常的会淡，被提到才想起，可手动抢救。**
 
 Python 只用标准库，数据保存在本机的 SQLite 文件中。附带一个「记忆宇宙」技能：把对话与记忆导出成两个可离线打开的三维视图——关联网络与真实行星。
